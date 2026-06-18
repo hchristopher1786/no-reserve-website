@@ -9,7 +9,4 @@
   "r2_buckets": [
     { "binding": "PHOTOS_BUCKET", "bucket_name": "no-reserve-photos" }
   ],
-  "kv_namespaces": [
-    { "binding": "GALLERIES", "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID" }
-  ]
 }
