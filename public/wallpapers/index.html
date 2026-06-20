@@ -4,17 +4,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wallpapers — No Reserve Photography</title>
+  <meta name="description" content="Full-resolution desktop wallpapers — $1 each." />
+  <link rel="icon" href="/Logo_Circular_PNG.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/main.css" />
 </head>
 <body>
-  <!-- PLACEHOLDER — each photo card here should call buyPhoto() to
-       kick off a Stripe Checkout session via /api/checkout. -->
-  <h1>Wallpapers</h1>
-  <div id="wallpaper-grid">
-    <!-- Photo cards render here once the bucket's file list (or a
-         small JSON manifest you maintain) is wired up. -->
-  </div>
 
+  <!-- ===== Shared header (duplicated across pages — no build system) ===== -->
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__logo" href="/" aria-label="No Reserve Photography home">
+        <img src="/Logo_Rectangular_Transp_Back.png" alt="No Reserve Photography" />
+      </a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav" id="site-nav">
+        <a href="/">Home</a>
+        <a href="/wallpapers/" class="is-active">Wallpapers</a>
+        <a href="/client-galleries/">Client Galleries</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===== Compact hero ===== -->
+    <section class="hero hero--compact">
+      <div class="hero__content">
+        <h1>Wallpapers</h1>
+        <p class="hero__subhead">Full-resolution desktop wallpapers — $1 each.</p>
+      </div>
+    </section>
+
+    <!-- ===== Storefront grid ===== -->
+    <!-- Real wallpaper photos go in public/assets/wallpapers/ — replace the
+         placeholder divs with <img> tags pointing to those paths. -->
+    <section class="section">
+      <div class="container">
+        <div class="wallpaper-grid">
+
+          <article class="wallpaper-card">
+            <div class="wallpaper-card__media placeholder-box">Wallpaper 1 (16:9)</div>
+            <div class="wallpaper-card__body">
+              <span class="wallpaper-card__title">Wallpaper Title</span>
+              <span class="wallpaper-card__price">$1.00</span>
+              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-01', 'Wallpaper Title', 100)">Buy &amp; Download</button>
+            </div>
+          </article>
+
+          <article class="wallpaper-card">
+            <div class="wallpaper-card__media placeholder-box">Wallpaper 2 (16:9)</div>
+            <div class="wallpaper-card__body">
+              <span class="wallpaper-card__title">Wallpaper Title</span>
+              <span class="wallpaper-card__price">$1.00</span>
+              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-02', 'Wallpaper Title', 100)">Buy &amp; Download</button>
+            </div>
+          </article>
+
+          <article class="wallpaper-card">
+            <div class="wallpaper-card__media placeholder-box">Wallpaper 3 (16:9)</div>
+            <div class="wallpaper-card__body">
+              <span class="wallpaper-card__title">Wallpaper Title</span>
+              <span class="wallpaper-card__price">$1.00</span>
+              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-03', 'Wallpaper Title', 100)">Buy &amp; Download</button>
+            </div>
+          </article>
+
+          <article class="wallpaper-card">
+            <div class="wallpaper-card__media placeholder-box">Wallpaper 4 (16:9)</div>
+            <div class="wallpaper-card__body">
+              <span class="wallpaper-card__title">Wallpaper Title</span>
+              <span class="wallpaper-card__price">$1.00</span>
+              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-04', 'Wallpaper Title', 100)">Buy &amp; Download</button>
+            </div>
+          </article>
+
+          <article class="wallpaper-card">
+            <div class="wallpaper-card__media placeholder-box">Wallpaper 5 (16:9)</div>
+            <div class="wallpaper-card__body">
+              <span class="wallpaper-card__title">Wallpaper Title</span>
+              <span class="wallpaper-card__price">$1.00</span>
+              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-05', 'Wallpaper Title', 100)">Buy &amp; Download</button>
+            </div>
+          </article>
+
+          <article class="wallpaper-card">
+            <div class="wallpaper-card__media placeholder-box">Wallpaper 6 (16:9)</div>
+            <div class="wallpaper-card__body">
+              <span class="wallpaper-card__title">Wallpaper Title</span>
+              <span class="wallpaper-card__price">$1.00</span>
+              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-06', 'Wallpaper Title', 100)">Buy &amp; Download</button>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Shared footer ===== -->
+  <footer class="site-footer">
+    <div class="container">
+      <img class="site-footer__logo" src="/Logo_Circular_PNG.png" alt="No Reserve Photography" />
+      <p>&copy; 2026 No Reserve Photography</p>
+      <div class="site-footer__links">
+        <a href="#" aria-label="Instagram (link coming soon)">Instagram</a>
+        <a href="#" aria-label="Bring a Trailer profile (link coming soon)">Bring a Trailer</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assets/js/main.js"></script>
+
+  <!-- ===== Checkout ===== -->
   <script>
+    // Posts to the existing Worker route /api/checkout, which creates a
+    // Stripe Checkout Session and returns its hosted URL.
+    // priceCents: 100 = $1.00
     async function buyPhoto(photoId, photoName, priceCents) {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -22,12 +135,10 @@
         body: JSON.stringify({ photoId, photoName, priceCents })
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url; // off to Stripe Checkout
-      } else {
-        console.error('Checkout failed', data);
-      }
+      if (data.url) window.location.href = data.url;
+      else alert('Something went wrong. Please try again.');
     }
   </script>
+
 </body>
 </html>

@@ -1,0 +1,494 @@
+/* =====================================================================
+   No Reserve Photography — shared stylesheet
+   Mobile-first. Breakpoints: 768px (tablet), 1024px (desktop).
+   Design language: dark charcoal, sharp edges, industrial/editorial.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Design tokens
+   --------------------------------------------------------------------- */
+:root {
+  --bg:            #1a1a1a; /* page background — dark charcoal */
+  --surface:       #242424; /* cards / panels */
+  --border:        #333333; /* borders / dividers */
+  --text:          #f0f0f0; /* primary text */
+  --text-muted:    #999999; /* secondary text */
+  --accent:        #b0b0b0; /* matches gray tones in the logo */
+
+  --nav-height:    72px;
+  --maxw:          1200px;
+
+  --space-xs:  0.5rem;
+  --space-sm:  1rem;
+  --space-md:  2rem;
+  --space-lg:  4rem;
+  --space-xl:  6rem;
+
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+  /* Condensed/bold for headings to echo the logo's industrial feel.
+     Oswald is a free Google Font condensed grotesque; falls back to a
+     system condensed face, then the body stack. */
+  --font-head:    'Oswald', 'Inter', system-ui, sans-serif;
+}
+
+/* ---------------------------------------------------------------------
+   2. Reset / base
+   --------------------------------------------------------------------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+img { display: block; max-width: 100%; }
+
+a { color: inherit; text-decoration: none; }
+
+h1, h2, h3 {
+  font-family: var(--font-head);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 0 0 var(--space-sm);
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.6rem; }
+
+p { margin: 0 0 var(--space-sm); }
+
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+.text-muted { color: var(--text-muted); }
+
+/* ---------------------------------------------------------------------
+   3. Buttons
+   --------------------------------------------------------------------- */
+.btn {
+  display: inline-block;
+  font-family: var(--font-head);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.9rem;
+  padding: 0.85rem 1.8rem;
+  border: 1px solid var(--accent);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Solid / primary */
+.btn--primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+.btn--primary:hover {
+  background: var(--text);
+  border-color: var(--text);
+}
+
+/* Ghost / secondary */
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+}
+.btn--ghost:hover {
+  background: var(--surface);
+  border-color: var(--text);
+}
+
+/* ---------------------------------------------------------------------
+   4. Site header / nav (fixed, shared across all pages)
+   --------------------------------------------------------------------- */
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: var(--nav-height);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header__inner {
+  height: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-header__logo img {
+  max-height: 48px;
+  width: auto;
+}
+
+/* Nav links — hidden behind hamburger on mobile by default */
+.site-nav {
+  position: fixed;
+  top: var(--nav-height);
+  left: 0;
+  right: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  gap: 0;
+  display: none;
+}
+.site-nav.is-open { display: flex; }
+
+.site-nav a {
+  font-family: var(--font-head);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.95rem;
+  color: var(--text);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 2px solid transparent;
+}
+.site-nav a:hover,
+.site-nav a.is-active { border-bottom-color: var(--accent); }
+
+/* Hamburger toggle */
+.nav-toggle {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.nav-toggle span {
+  display: block;
+  height: 2px;
+  background: var(--text);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Push page content below the fixed header */
+main { padding-top: var(--nav-height); }
+
+/* ---------------------------------------------------------------------
+   5. Hero (homepage = full viewport; inner pages = compact)
+   --------------------------------------------------------------------- */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: calc(100vh - var(--nav-height));
+  /* placeholder gradient — replace with a full-bleed car photo */
+  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+  overflow: hidden;
+}
+
+/* tiny label marking where the real photo goes */
+.hero__placeholder-label {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  padding: 0.3rem 0.6rem;
+}
+
+.hero__content {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  padding: var(--space-lg) var(--space-md);
+}
+.hero__content h1 {
+  font-size: clamp(2.2rem, 7vw, 4.5rem);
+  margin-bottom: var(--space-sm);
+}
+.hero__subhead {
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  color: var(--text);
+  margin-bottom: var(--space-md);
+}
+.hero__body {
+  color: var(--text-muted);
+  margin-bottom: var(--space-md);
+}
+.hero__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+}
+
+/* Compact hero for inner pages */
+.hero--compact {
+  min-height: 40vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2e2e2e 100%);
+}
+
+/* ---------------------------------------------------------------------
+   6. Generic section rhythm
+   --------------------------------------------------------------------- */
+.section { padding: var(--space-xl) 0; }
+.section__heading {
+  text-align: center;
+  margin-bottom: var(--space-lg);
+}
+
+/* Reusable placeholder image box (sharp edges, dark card) */
+.placeholder-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------------------
+   7. Carousel ("The Work")
+   --------------------------------------------------------------------- */
+.carousel { position: relative; }
+
+.carousel__viewport { overflow: hidden; }
+
+.carousel__track {
+  display: flex;
+  gap: var(--space-sm);
+  transition: transform 0.35s ease;
+}
+
+.carousel__slide {
+  flex: 0 0 100%; /* 1 per view on mobile */
+}
+.carousel__slide .placeholder-box { height: 400px; }
+
+.carousel__caption {
+  min-height: 1.4em; /* reserve space even when empty */
+  margin-top: var(--space-xs);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.carousel__controls {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+.carousel__btn {
+  width: 48px;
+  height: 48px;
+  font-size: 1.2rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.carousel__btn:hover { border-color: var(--accent); }
+.carousel__btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---------------------------------------------------------------------
+   8. About section
+   --------------------------------------------------------------------- */
+.about__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+  align-items: center;
+}
+.about__media .placeholder-box { height: 420px; }
+
+/* ---------------------------------------------------------------------
+   9. Wallpaper storefront grid
+   --------------------------------------------------------------------- */
+.wallpaper-grid {
+  display: grid;
+  grid-template-columns: 1fr;            /* mobile: 1 col */
+  gap: var(--space-md);
+}
+.wallpaper-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.wallpaper-card__media {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}
+.wallpaper-card__body {
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.wallpaper-card__title {
+  font-family: var(--font-head);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+}
+.wallpaper-card__price { color: var(--text-muted); }
+.wallpaper-card .btn { margin-top: var(--space-xs); text-align: center; }
+
+/* Brightness hover for any real <img> dropped into a media slot */
+.wallpaper-card__media img,
+.carousel__slide img,
+.gallery-grid img {
+  transition: filter 0.2s ease;
+}
+.wallpaper-card__media img:hover,
+.carousel__slide img:hover,
+.gallery-grid img:hover { filter: brightness(1.1); }
+
+/* ---------------------------------------------------------------------
+   10. Client galleries — access card + results
+   --------------------------------------------------------------------- */
+.access-card {
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: var(--space-md);
+  text-align: center;
+}
+.access-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+.access-card input[type="text"] {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+.access-card input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-error {
+  color: #e06c6c;
+  font-size: 0.9rem;
+  min-height: 1.2em;
+}
+
+/* Masonry-ish gallery using CSS columns */
+.gallery-results { margin-top: var(--space-lg); }
+.gallery-grid {
+  column-count: 1;
+  column-gap: var(--space-sm);
+}
+.gallery-grid img,
+.gallery-grid .placeholder-box {
+  width: 100%;
+  margin-bottom: var(--space-sm);
+  break-inside: avoid;
+}
+.gallery-grid .placeholder-box { height: 240px; }
+
+.is-hidden { display: none !important; }
+
+/* ---------------------------------------------------------------------
+   11. Footer
+   --------------------------------------------------------------------- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: var(--space-lg) 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+.site-footer__logo { margin: 0 auto var(--space-sm); width: 64px; height: 64px; }
+.site-footer__links {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  margin-top: var(--space-sm);
+}
+.site-footer__links a { border-bottom: 1px solid transparent; }
+.site-footer__links a:hover { border-bottom-color: var(--accent); }
+
+/* ---------------------------------------------------------------------
+   12. Simple centered message page (download-success)
+   --------------------------------------------------------------------- */
+.message-page {
+  min-height: calc(100vh - var(--nav-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-lg) var(--space-md);
+}
+
+/* ---------------------------------------------------------------------
+   13. Responsive — tablet (>=768px)
+   --------------------------------------------------------------------- */
+@media (min-width: 768px) {
+  h1 { font-size: 2.6rem; }
+  h2 { font-size: 2rem; }
+
+  /* Nav becomes a horizontal row; hide hamburger */
+  .nav-toggle { display: none; }
+  .site-nav {
+    position: static;
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-md);
+    background: none;
+    border: none;
+  }
+  .site-nav a { padding: 0; }
+
+  /* Carousel: 3 per view (slide flex-basis set in JS-friendly CSS) */
+  .carousel__slide {
+    flex: 0 0 calc((100% - 2 * var(--space-sm)) / 3);
+  }
+
+  .about__grid { grid-template-columns: 1fr 1fr; }
+
+  .wallpaper-grid { grid-template-columns: repeat(2, 1fr); } /* tablet: 2 col */
+
+  .gallery-grid { column-count: 2; }
+}
+
+/* ---------------------------------------------------------------------
+   14. Responsive — desktop (>=1024px)
+   --------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .wallpaper-grid { grid-template-columns: repeat(3, 1fr); } /* desktop: 3 col */
+  .gallery-grid { column-count: 3; }
+}

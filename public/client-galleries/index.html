@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client Galleries — No Reserve Photography</title>
+  <meta name="description" content="Your photos are ready. Enter your gallery access code to view your shoot." />
+  <link rel="icon" href="/Logo_Circular_PNG.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/main.css" />
+</head>
+<body>
+
+  <!-- ===== Shared header (duplicated across pages — no build system) ===== -->
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__logo" href="/" aria-label="No Reserve Photography home">
+        <img src="/Logo_Rectangular_Transp_Back.png" alt="No Reserve Photography" />
+      </a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav" id="site-nav">
+        <a href="/">Home</a>
+        <a href="/wallpapers/">Wallpapers</a>
+        <a href="/client-galleries/" class="is-active">Client Galleries</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===== Compact hero ===== -->
+    <section class="hero hero--compact">
+      <div class="hero__content">
+        <h1>Client Galleries</h1>
+        <p class="hero__subhead">Your photos are ready.</p>
+      </div>
+    </section>
+
+    <!-- ===== Access form ===== -->
+    <section class="section" id="access-section">
+      <div class="container">
+        <div class="access-card">
+          <h2>Enter your gallery code</h2>
+          <form class="access-card__form" id="gallery-form">
+            <input type="text" id="gallery-code" placeholder="Gallery access code"
+                   autocomplete="off" autocapitalize="off" spellcheck="false" required />
+            <button type="submit" class="btn btn--primary">View My Gallery</button>
+            <p class="form-error" id="gallery-error" role="alert"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Results (hidden until a valid code is entered) ===== -->
+    <section class="section is-hidden" id="results-section">
+      <div class="container">
+        <h2 class="section__heading" id="gallery-client-name"><!-- clientName injected here --></h2>
+        <div class="gallery-grid" id="gallery-grid"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Shared footer ===== -->
+  <footer class="site-footer">
+    <div class="container">
+      <img class="site-footer__logo" src="/Logo_Circular_PNG.png" alt="No Reserve Photography" />
+      <p>&copy; 2026 No Reserve Photography</p>
+      <div class="site-footer__links">
+        <a href="#" aria-label="Instagram (link coming soon)">Instagram</a>
+        <a href="#" aria-label="Bring a Trailer profile (link coming soon)">Bring a Trailer</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assets/js/main.js"></script>
+
+  <!-- ===== Gallery lookup (all client-side, no page reload) ===== -->
+  <script>
+    (function () {
+      var form = document.getElementById('gallery-form');
+      var input = document.getElementById('gallery-code');
+      var errorEl = document.getElementById('gallery-error');
+      var accessSection = document.getElementById('access-section');
+      var resultsSection = document.getElementById('results-section');
+      var nameEl = document.getElementById('gallery-client-name');
+      var grid = document.getElementById('gallery-grid');
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        errorEl.textContent = '';
+
+        var token = input.value.trim();
+        if (!token) return;
+
+        var res;
+        try {
+          res = await fetch('/api/gallery/' + encodeURIComponent(token));
+        } catch (err) {
+          errorEl.textContent = 'Network error. Please try again.';
+          return;
+        }
+
+        // 404 -> bad/unknown code
+        if (res.status === 404) {
+          errorEl.textContent = 'Gallery not found. Check your code and try again.';
+          return;
+        }
+        if (!res.ok) {
+          errorEl.textContent = 'Something went wrong. Please try again.';
+          return;
+        }
+
+        // 200 -> { clientName: string, photoKeys: string[] }
+        var gallery = await res.json();
+        renderGallery(gallery);
+      });
+
+      function renderGallery(gallery) {
+        nameEl.textContent = gallery.clientName || 'Your Gallery';
+
+        grid.innerHTML = '';
+        (gallery.photoKeys || []).forEach(function (key) {
+          // NOTE: /api/photo/{photoKey} does NOT exist yet. It will be the
+          // R2 signed-URL endpoint we build next (download fulfillment phase).
+          // Until then these <img> tags will fail to load — that's expected.
+          var img = document.createElement('img');
+          img.src = '/api/photo/' + encodeURIComponent(key);
+          img.alt = (gallery.clientName ? gallery.clientName + ' — ' : '') + key;
+          img.loading = 'lazy';
+          grid.appendChild(img);
+        });
+
+        // Swap the form out for the results.
+        accessSection.classList.add('is-hidden');
+        resultsSection.classList.remove('is-hidden');
+      }
+    })();
+  </script>
+
+</body>
+</html>

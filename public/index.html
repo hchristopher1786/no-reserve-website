@@ -3,15 +3,184 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>No Reserve Photography</title>
+  <title>No Reserve Photography — Auction Car Photography in Houston, TX</title>
+  <meta name="description" content="Auction-ready photography for serious sellers. Exotics, classics, and collector vehicles for Bring a Trailer, PCarMarket, Cars & Bids, Mecum, and eBay Motors." />
+  <link rel="icon" href="/Logo_Circular_PNG.png" />
+
+  <!-- Fonts: Inter (body) + Oswald (condensed headings) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/main.css" />
 </head>
 <body>
-  <!-- PLACEHOLDER — structural scaffolding, not the final design. -->
-  <h1>No Reserve Photography</h1>
-  <p>The gallery that sells the car.</p>
-  <nav>
-    <a href="/wallpapers/">Wallpapers</a>
-    <a href="/gallery/">Client Gallery</a>
-  </nav>
+
+  <!-- ===== Shared header (duplicated across pages — no build system) ===== -->
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__logo" href="/" aria-label="No Reserve Photography home">
+        <img src="/Logo_Rectangular_Transp_Back.png" alt="No Reserve Photography" />
+      </a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav" id="site-nav">
+        <a href="/" class="is-active">Home</a>
+        <a href="/wallpapers/">Wallpapers</a>
+        <a href="/client-galleries/">Client Galleries</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <span class="hero__placeholder-label">HERO IMAGE — replace with full-bleed car photo</span>
+      <div class="hero__content">
+        <h1>No Reserve Photography</h1>
+        <p class="hero__subhead">Auction-ready photography for serious sellers.</p>
+        <p class="hero__body">
+          Based in Houston, TX — specializing in exotics, classics, and collector
+          vehicles for Bring a Trailer, PCarMarket, Cars &amp; Bids, Mecum, and eBay Motors.
+        </p>
+        <div class="hero__ctas">
+          <a class="btn btn--primary" href="/wallpapers/">View Wallpapers</a>
+          <a class="btn btn--ghost" href="/client-galleries/">Client Galleries</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Photo carousel: "The Work" ===== -->
+    <!-- Real images replace the .placeholder-box divs with <img> tags later. -->
+    <section class="section">
+      <div class="container">
+        <h2 class="section__heading">The Work</h2>
+
+        <div class="carousel" id="work-carousel">
+          <div class="carousel__viewport">
+            <div class="carousel__track" id="carousel-track">
+              <!-- 8 placeholder slides -->
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 1 of 8</div>
+                <p class="carousel__caption"><!-- caption slot --></p>
+              </div>
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 2 of 8</div>
+                <p class="carousel__caption"></p>
+              </div>
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 3 of 8</div>
+                <p class="carousel__caption"></p>
+              </div>
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 4 of 8</div>
+                <p class="carousel__caption"></p>
+              </div>
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 5 of 8</div>
+                <p class="carousel__caption"></p>
+              </div>
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 6 of 8</div>
+                <p class="carousel__caption"></p>
+              </div>
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 7 of 8</div>
+                <p class="carousel__caption"></p>
+              </div>
+              <div class="carousel__slide">
+                <div class="placeholder-box">Photo 8 of 8</div>
+                <p class="carousel__caption"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="carousel__controls">
+            <button class="carousel__btn" id="carousel-prev" aria-label="Previous photos">&larr;</button>
+            <button class="carousel__btn" id="carousel-next" aria-label="Next photos">&rarr;</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== About ===== -->
+    <section class="section">
+      <div class="container">
+        <div class="about__grid">
+          <div class="about__text">
+            <h2>Every Detail. Every Angle.</h2>
+            <p>
+              Auction buyers scrutinize every pixel. I bring studio-quality lighting
+              and an obsessive eye to every shoot — so your listing stands apart from
+              the phone-photo crowd. From barn finds to six-figure exotics, if it's
+              going to auction, it deserves to be seen.
+            </p>
+          </div>
+          <div class="about__media">
+            <div class="placeholder-box">ABOUT IMAGE — replace with photo</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Shared footer ===== -->
+  <footer class="site-footer">
+    <div class="container">
+      <img class="site-footer__logo" src="/Logo_Circular_PNG.png" alt="No Reserve Photography" />
+      <p>&copy; 2026 No Reserve Photography</p>
+      <div class="site-footer__links">
+        <a href="#" aria-label="Instagram (link coming soon)">Instagram</a>
+        <a href="#" aria-label="Bring a Trailer profile (link coming soon)">Bring a Trailer</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assets/js/main.js"></script>
+
+  <!-- ===== Carousel logic (manual only, no autoplay) ===== -->
+  <script>
+    (function () {
+      var track = document.getElementById('carousel-track');
+      var prev = document.getElementById('carousel-prev');
+      var next = document.getElementById('carousel-next');
+      if (!track || !prev || !next) return;
+
+      var slides = track.children.length;
+
+      // How many slides are visible depends on the breakpoint (CSS: 1 on
+      // mobile, 3 from 768px up). Read it back so paging math matches.
+      function perView() {
+        return window.matchMedia('(min-width: 768px)').matches ? 3 : 1;
+      }
+
+      var index = 0; // index of the left-most visible slide
+
+      function maxIndex() {
+        return Math.max(0, slides - perView());
+      }
+
+      function render() {
+        index = Math.min(index, maxIndex());
+        // Each step shifts by one slide width plus the flex gap.
+        var slideEl = track.children[0];
+        var gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap || 0) || 0;
+        var step = slideEl.getBoundingClientRect().width + gap;
+        track.style.transform = 'translateX(' + (-index * step) + 'px)';
+        prev.disabled = index <= 0;
+        next.disabled = index >= maxIndex();
+      }
+
+      prev.addEventListener('click', function () { index = Math.max(0, index - perView()); render(); });
+      next.addEventListener('click', function () { index = Math.min(maxIndex(), index + perView()); render(); });
+      window.addEventListener('resize', render);
+
+      render();
+    })();
+  </script>
+
 </body>
 </html>

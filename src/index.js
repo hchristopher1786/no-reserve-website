@@ -103,15 +103,22 @@ async function handleCheckout(request, env) {
 //      "checkout.session.completed". Stripe shows you the signing
 //      secret to put in step 1.
 //
-// NOT DONE YET, ON PURPOSE: verifyStripeSignature() below always
-// returns true. Real HMAC-SHA256 verification against Stripe's
-// signature scheme needs to go there before this touches real money —
-// without it, anyone who finds this URL could fake a "payment
-// succeeded" event and get a free download link.
+// Signature verification is implemented in verifyStripeSignature()
+// below (real HMAC-SHA256 against Stripe's scheme, with replay
+// protection). The handler fails closed if STRIPE_WEBHOOK_SECRET is
+// missing or the signature doesn't match.
 // ---------------------------------------------------------------------
 async function handleWebhook(request, env) {
   const signature = request.headers.get("stripe-signature");
   const payload = await request.text();
+
+  if (!env.STRIPE_WEBHOOK_SECRET) {
+    // Fail closed: without the secret we can't verify anything, so we
+    // must not process the event. Misconfiguration should never silently
+    // fall back to "trust everyone".
+    console.error("STRIPE_WEBHOOK_SECRET is not set; rejecting webhook.");
+    return new Response("Webhook not configured", { status: 500 });
+  }
 
   const isValid = await verifyStripeSignature(payload, signature, env.STRIPE_WEBHOOK_SECRET);
   if (!isValid) {
@@ -133,9 +140,86 @@ async function handleWebhook(request, env) {
   return new Response("ok");
 }
 
-// PLACEHOLDER — replace before going live.
+// Verifies Stripe's webhook signature using the same scheme the official
+// Stripe SDKs use, implemented against the Workers Web Crypto API.
+//
+// The "stripe-signature" header looks like:
+//   t=1690000000,v1=5257a8...,v1=...
+// We rebuild the signed payload as `${t}.${rawBody}`, HMAC-SHA256 it with
+// the endpoint signing secret (the full "whsec_..." string is the key),
+// and check that the hex digest matches one of the v1 signatures using a
+// constant-time compare. We also reject timestamps outside a tolerance
+// window so a captured request can't be replayed later.
+const SIGNATURE_TOLERANCE_SECONDS = 5 * 60; // matches Stripe's default
+
 async function verifyStripeSignature(payload, signature, secret) {
-  return true;
+  if (!signature || !secret) return false;
+
+  // Parse "t=...,v1=...,v1=..." into a timestamp and the list of v1 sigs.
+  let timestamp;
+  const expectedSigs = [];
+  for (const part of signature.split(",")) {
+    const [key, value] = part.split("=");
+    if (key === "t") {
+      timestamp = value;
+    } else if (key === "v1" && value) {
+      expectedSigs.push(value);
+    }
+  }
+
+  if (!timestamp || expectedSigs.length === 0) return false;
+
+  // Reject stale/future timestamps to prevent replay attacks.
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isFinite(timestampSeconds)) return false;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSeconds - timestampSeconds) > SIGNATURE_TOLERANCE_SECONDS) {
+    return false;
+  }
+
+  // Compute HMAC-SHA256 over `${t}.${payload}`.
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signedPayload = encoder.encode(`${timestamp}.${payload}`);
+  const digest = await crypto.subtle.sign("HMAC", key, signedPayload);
+  const expectedHex = bufferToHex(digest);
+
+  // A signature is valid if it matches any of the provided v1 values.
+  // Compare every candidate (no early return) to keep timing constant.
+  let matched = false;
+  for (const candidate of expectedSigs) {
+    if (timingSafeEqual(candidate, expectedHex)) {
+      matched = true;
+    }
+  }
+  return matched;
+}
+
+function bufferToHex(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let hex = "";
+  for (const b of bytes) {
+    hex += b.toString(16).padStart(2, "0");
+  }
+  return hex;
+}
+
+// Constant-time string comparison to avoid leaking signature bytes via
+// response timing. Returns false immediately on length mismatch (the
+// length of a hex SHA-256 digest is not secret).
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return mismatch === 0;
 }
 
 // ---------------------------------------------------------------------
