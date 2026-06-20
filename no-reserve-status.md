@@ -71,25 +71,31 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
 - **Download fulfillment** — `/api/download` verifies the Stripe session
   is paid, then streams the file from R2. `/download-success` shows a
   Download button wired to it.
+- **49 wallpapers live.** Imported from a Google Takeout export, renamed
+  `wallpaper-01..51` (two duplicate originals dropped, gaps at 22 & 35),
+  uploaded to R2 at `wallpapers/wallpaper-NN.jpg`, listed in `catalog.js`,
+  rendered on the dynamic storefront with downscaled public preview
+  thumbnails in `public/assets/wallpapers/`. Originals kept out of the
+  repo in `C:\staging\wallpapers\` so full-res stays paywalled.
+- **GALLERIES KV bound.** Namespace created (id
+  `8d54027017b04c1e81d851f7992e266c`) and added to `wrangler.jsonc`, so
+  `/api/gallery` and `/api/photo` work once deployed. A demo gallery is
+  seeded under key `demo` (clientName "Demo Client", pointing at two
+  existing wallpaper objects) for testing — delete it before launch.
+  NOTE: write KV JSON values WITHOUT a BOM (PowerShell `Set-Content
+  -Encoding UTF8` adds one and breaks `JSON.parse`); use a BOM-free file.
 
 ## Still needed before a real launch
 
-1. **Bind the GALLERIES KV namespace.** Not bound yet (a placeholder ID
-   broke deploys earlier, so it's deliberately absent). `/api/gallery`
-   and `/api/photo` return 503 until it's set up:
-       wrangler kv namespace create GALLERIES
-   then add to wrangler.jsonc:
-       "kv_namespaces": [{ "binding": "GALLERIES", "id": "<real id>" }]
-   The wallpaper download flow does NOT depend on this.
-2. **Upload real photos to R2.** Wallpapers must land at the keys in
-   `catalog.js` (`wallpapers/wallpaper-01.jpg` …). Gallery photos must
-   match each gallery's `photoKeys`. Until then `/api/download` and
-   `/api/photo` return 404 ("file not available yet").
-3. **Create client gallery entries in KV** (after step 1):
-       key: "<token>"  value: {"clientName":"...","photoKeys":["..."]}
-4. **Drop in real placeholder swaps** — hero photo, carousel images,
-   about image, wallpaper card images, wallpaper titles/prices.
-5. **Switch Stripe to live mode** and confirm the webhook secret +
+1. **Upload real client gallery photos to R2** and create real gallery
+   entries in KV:
+       wrangler kv key put --namespace-id 8d54027017b04c1e81d851f7992e266c \
+         "<token>" --path gallery.json --remote
+   where gallery.json is {"clientName":"...","photoKeys":["..."]} (no BOM)
+   and each photoKey is a real object in the `no-reserve-photos` bucket.
+2. **Drop in real placeholder swaps** — hero photo, carousel images,
+   about image. (Wallpaper card thumbnails are done.)
+3. **Switch Stripe to live mode** and confirm the webhook secret +
    keys are the live ones before taking real money.
-6. **Footer links** — Instagram and Bring a Trailer hrefs are still `#`.
-7. **Custom domain** — wire noreservephotography.com to the Worker.
+4. **Footer links** — Instagram and Bring a Trailer hrefs are still `#`.
+5. **Custom domain** — wire noreservephotography.com to the Worker.
