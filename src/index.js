@@ -13,7 +13,16 @@
 // real files in /public.
 
 import { getWallpaper } from "./catalog.js";
-import { crc32, buildLocalHeader, buildCentralHeader, buildEnd } from "./zip.js";
+import {
+  CRC_INIT,
+  crc32Update,
+  crc32Final,
+  buildLocalHeader,
+  buildDataDescriptor,
+  buildCentralHeader,
+  buildEnd,
+  DATA_DESCRIPTOR_SIZE,
+} from "./zip.js";
 
 export default {
   async fetch(request, env) {
@@ -489,17 +498,35 @@ async function handleGalleryZip(token, env) {
     for (const key of keys) {
       const object = await env.PHOTOS_BUCKET.get(key);
       if (!object) continue; // skip anything missing rather than abort
-      const data = new Uint8Array(await object.arrayBuffer());
-      const crc = crc32(data);
       const date = object.uploaded ? new Date(object.uploaded) : new Date();
       // Entry name: put everything under a folder named for the client.
       const nameBytes = enc.encode(`${slug}/${key.split("/").pop()}`);
 
-      const lh = buildLocalHeader({ nameBytes, crc, size: data.length, date });
+      // Streaming entry: header first (crc/size unknown), then the object's
+      // bytes passed straight through while we CRC them, then a trailing data
+      // descriptor with the real crc/size. We never buffer the whole file.
+      const lh = buildLocalHeader({ nameBytes, date, streaming: true });
       yield lh;
-      yield data;
-      central.push({ nameBytes, crc, size: data.length, offset, date });
-      offset += lh.length + data.length;
+
+      let crc = CRC_INIT;
+      let size = 0;
+      const reader = object.body.getReader();
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          crc = crc32Update(crc, value);
+          size += value.length;
+          yield value;
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      crc = crc32Final(crc);
+
+      yield buildDataDescriptor({ crc, size });
+      central.push({ nameBytes, crc, size, offset, date, streaming: true });
+      offset += lh.length + size + DATA_DESCRIPTOR_SIZE;
     }
 
     let cdSize = 0;

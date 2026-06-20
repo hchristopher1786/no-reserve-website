@@ -29,12 +29,23 @@ const CRC_TABLE = (() => {
   return t;
 })();
 
-export function crc32(bytes, seed = 0) {
-  let c = (seed ^ 0xffffffff) >>> 0;
+// Incremental CRC: keep a running 32-bit register (start at 0xffffffff),
+// feed it chunks, then finalize. Lets us CRC a file as it streams through
+// without ever holding the whole file in memory.
+export const CRC_INIT = 0xffffffff;
+export function crc32Update(crc, bytes) {
+  let c = crc >>> 0;
   for (let i = 0; i < bytes.length; i++) {
     c = (CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8)) >>> 0;
   }
-  return (c ^ 0xffffffff) >>> 0;
+  return c >>> 0;
+}
+export function crc32Final(crc) {
+  return (crc ^ 0xffffffff) >>> 0;
+}
+// One-shot helper (used by tests).
+export function crc32(bytes, seed = 0) {
+  return crc32Final(crc32Update((seed ^ 0xffffffff) >>> 0, bytes));
 }
 
 // --- little-endian writers into a growable byte list ------------------
@@ -64,25 +75,31 @@ function dosDateTime(date) {
   return { time: time & 0xffff, date: dosDate & 0xffff };
 }
 
-// General-purpose flag bit 11 = filename is UTF-8.
+// General-purpose flags: bit 11 = filename is UTF-8; bit 3 = sizes/crc are
+// in a trailing data descriptor (set when streaming).
 const FLAG_UTF8 = 0x0800;
+const FLAG_DATA_DESCRIPTOR = 0x0008;
 
 // --- header builders --------------------------------------------------
-// Local file header + filename (no extra field; sizes/crc are known).
-export function buildLocalHeader({ nameBytes, crc, size, date }) {
+// Local file header + filename. When `streaming` is true the crc/sizes are
+// written as zero here and supplied later via a data descriptor (so we can
+// emit the header before we've read/CRC'd the file). Otherwise crc+size are
+// written inline (used by zipSync/tests).
+export function buildLocalHeader({ nameBytes, crc = 0, size = 0, date, streaming = false }) {
   const { time, date: dosDate } = dosDateTime(date);
+  const flags = FLAG_UTF8 | (streaming ? FLAG_DATA_DESCRIPTOR : 0);
   const a = [];
-  pushU32(a, 0x04034b50); // signature
-  pushU16(a, 20);         // version needed (2.0)
-  pushU16(a, FLAG_UTF8);  // flags
-  pushU16(a, 0);          // method: store
+  pushU32(a, 0x04034b50);        // signature
+  pushU16(a, 20);                // version needed (2.0)
+  pushU16(a, flags);
+  pushU16(a, 0);                 // method: store
   pushU16(a, time);
   pushU16(a, dosDate);
-  pushU32(a, crc);
-  pushU32(a, size);       // compressed
-  pushU32(a, size);       // uncompressed
+  pushU32(a, streaming ? 0 : crc);
+  pushU32(a, streaming ? 0 : size); // compressed
+  pushU32(a, streaming ? 0 : size); // uncompressed
   pushU16(a, nameBytes.length);
-  pushU16(a, 0);          // extra length
+  pushU16(a, 0);                 // extra length
   const head = new Uint8Array(a);
   const out = new Uint8Array(head.length + nameBytes.length);
   out.set(head, 0);
@@ -90,11 +107,23 @@ export function buildLocalHeader({ nameBytes, crc, size, date }) {
   return out;
 }
 
+// Trailing data descriptor (with signature). 16 bytes for our < 4GB files.
+export const DATA_DESCRIPTOR_SIZE = 16;
+export function buildDataDescriptor({ crc, size }) {
+  const a = [];
+  pushU32(a, 0x08074b50); // data descriptor signature
+  pushU32(a, crc);
+  pushU32(a, size);       // compressed
+  pushU32(a, size);       // uncompressed
+  return new Uint8Array(a);
+}
+
 // Central directory header for one entry. Adds a ZIP64 extra field only if
 // the local-header offset exceeds 4GB.
-export function buildCentralHeader({ nameBytes, crc, size, offset, date }) {
+export function buildCentralHeader({ nameBytes, crc, size, offset, date, streaming = false }) {
   const { time, date: dosDate } = dosDateTime(date);
   const needsZip64 = offset > U32_MAX;
+  const flags = FLAG_UTF8 | (streaming ? FLAG_DATA_DESCRIPTOR : 0);
 
   const extra = [];
   if (needsZip64) {
@@ -107,7 +136,7 @@ export function buildCentralHeader({ nameBytes, crc, size, offset, date }) {
   pushU32(a, 0x02014b50);            // signature
   pushU16(a, 45);                    // version made by
   pushU16(a, needsZip64 ? 45 : 20);  // version needed
-  pushU16(a, FLAG_UTF8);
+  pushU16(a, flags);
   pushU16(a, 0);                     // method: store
   pushU16(a, time);
   pushU16(a, dosDate);
