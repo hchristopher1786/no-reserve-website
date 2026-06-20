@@ -49,6 +49,18 @@ export default {
       );
     }
 
+    // Full-resolution client-gallery download: /api/gallery-download/{token}/{key}.
+    // Same token-gating as /api/photo, but checks the gallery's downloadKeys
+    // (the full-res originals) and serves them as a file attachment.
+    const galDownloadMatch = url.pathname.match(/^\/api\/gallery-download\/([^/]+)\/(.+)$/);
+    if (galDownloadMatch && request.method === "GET") {
+      return handleGalleryDownload(
+        decodeURIComponent(galDownloadMatch[1]),
+        decodeURIComponent(galDownloadMatch[2]),
+        env
+      );
+    }
+
     // Nothing matched above — let static assets handle it (this will
     // 404 naturally if it's not a real file either).
     return env.ASSETS.fetch(request);
@@ -375,6 +387,53 @@ async function handlePhoto(token, photoKey, env) {
   headers.set("etag", object.httpEtag);
   // Private: it's a client's gallery. Allow brief reuse within the browser.
   headers.set("Cache-Control", "private, max-age=3600");
+
+  return new Response(object.body, { headers });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/gallery-download/{token}/{key} — full-resolution download.
+//
+// Same token-gating as /api/photo, but validates against the gallery's
+// downloadKeys (the full-res originals) and serves the object as a file
+// attachment so the browser saves it instead of rendering it inline.
+// ---------------------------------------------------------------------
+async function handleGalleryDownload(token, key, env) {
+  if (!env.GALLERIES) {
+    return new Response("Galleries not configured", { status: 503 });
+  }
+
+  const raw = await env.GALLERIES.get(token);
+  if (!raw) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  let gallery;
+  try {
+    gallery = JSON.parse(raw);
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const keys = Array.isArray(gallery.downloadKeys) ? gallery.downloadKeys : [];
+  if (!keys.includes(key)) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const object = await env.PHOTOS_BUCKET.get(key);
+  if (!object) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  if (!headers.get("content-type")) {
+    headers.set("content-type", contentTypeFor(key));
+  }
+  headers.set("etag", object.httpEtag);
+  headers.set("Cache-Control", "private, no-store");
+  const filename = key.split("/").pop();
+  headers.set("Content-Disposition", `attachment; filename="${filename}"`);
 
   return new Response(object.body, { headers });
 }

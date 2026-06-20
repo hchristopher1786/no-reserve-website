@@ -61,6 +61,10 @@
     <section class="section is-hidden" id="results-section">
       <div class="container">
         <h2 class="section__heading" id="gallery-client-name"><!-- clientName injected here --></h2>
+        <div class="gallery-toolbar is-hidden" id="gallery-toolbar">
+          <span class="gallery-toolbar__count" id="gallery-count"></span>
+          <button type="button" class="btn btn--primary" id="download-all">Download all (full-res)</button>
+        </div>
         <div class="gallery-grid" id="gallery-grid"></div>
       </div>
     </section>
@@ -117,28 +121,84 @@
           return;
         }
 
-        // 200 -> { clientName: string, photoKeys: string[] }
+        // 200 -> { clientName, photoKeys: string[], downloadKeys?: string[] }
         var gallery = await res.json();
         renderGallery(token, gallery);
       });
 
+      var toolbar = document.getElementById('gallery-toolbar');
+      var countEl = document.getElementById('gallery-count');
+      var downloadAllBtn = document.getElementById('download-all');
+
+      function downloadHref(token, key) {
+        return '/api/gallery-download/' + encodeURIComponent(token) + '/' + encodeURIComponent(key);
+      }
+
       function renderGallery(token, gallery) {
         nameEl.textContent = gallery.clientName || 'Your Gallery';
 
+        var photoKeys = gallery.photoKeys || [];
+        var downloadKeys = gallery.downloadKeys || [];
+
         grid.innerHTML = '';
-        (gallery.photoKeys || []).forEach(function (key) {
-          // Token-gated R2 endpoint: the Worker verifies this key belongs
-          // to this gallery before streaming the image.
+        photoKeys.forEach(function (key, i) {
+          var fig = document.createElement('figure');
+          fig.className = 'gallery-item';
+
+          // Token-gated preview: the Worker verifies this key belongs to
+          // this gallery before streaming the (downscaled) image.
           var img = document.createElement('img');
           img.src = '/api/photo/' + encodeURIComponent(token) + '/' + encodeURIComponent(key);
           img.alt = (gallery.clientName ? gallery.clientName + ' — ' : '') + key;
           img.loading = 'lazy';
-          grid.appendChild(img);
+          fig.appendChild(img);
+
+          // Per-photo full-res download (separate originals, served as a
+          // file attachment). Only if a matching downloadKey exists.
+          var dlKey = downloadKeys[i];
+          if (dlKey) {
+            var a = document.createElement('a');
+            a.className = 'gallery-item__dl';
+            a.href = downloadHref(token, dlKey);
+            a.setAttribute('download', '');
+            a.textContent = '↓ Full-res';
+            fig.appendChild(a);
+          }
+
+          grid.appendChild(fig);
         });
+
+        // Download-all toolbar — only when full-res keys are available.
+        if (downloadKeys.length) {
+          countEl.textContent = photoKeys.length + ' photos';
+          toolbar.classList.remove('is-hidden');
+          downloadAllBtn.onclick = function () { downloadAll(token, downloadKeys); };
+        } else {
+          toolbar.classList.add('is-hidden');
+        }
 
         // Swap the form out for the results.
         accessSection.classList.add('is-hidden');
         resultsSection.classList.remove('is-hidden');
+      }
+
+      // Trigger each full-res download in turn. Browsers may ask to allow
+      // multiple downloads; the short delay keeps them from being dropped.
+      async function downloadAll(token, downloadKeys) {
+        var orig = downloadAllBtn.textContent;
+        downloadAllBtn.disabled = true;
+        for (var i = 0; i < downloadKeys.length; i++) {
+          downloadAllBtn.textContent = 'Downloading ' + (i + 1) + ' / ' + downloadKeys.length + '…';
+          var a = document.createElement('a');
+          a.href = downloadHref(token, downloadKeys[i]);
+          a.setAttribute('download', '');
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          await new Promise(function (r) { setTimeout(r, 700); });
+        }
+        downloadAllBtn.textContent = orig;
+        downloadAllBtn.disabled = false;
       }
     })();
   </script>

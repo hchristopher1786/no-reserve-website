@@ -78,21 +78,29 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
   thumbnails in `public/assets/wallpapers/`. Originals kept out of the
   repo in `C:\staging\wallpapers\` so full-res stays paywalled.
 - **GALLERIES KV bound.** Namespace created (id
-  `8d54027017b04c1e81d851f7992e266c`) and added to `wrangler.jsonc`, so
-  `/api/gallery` and `/api/photo` work once deployed. A demo gallery is
-  seeded under key `demo` (clientName "Demo Client", pointing at two
-  existing wallpaper objects) for testing — delete it before launch.
+  `8d54027017b04c1e81d851f7992e266c`) and added to `wrangler.jsonc`;
+  `/api/gallery` and `/api/photo` verified live. (The earlier `demo`
+  entry was deleted.)
   NOTE: write KV JSON values WITHOUT a BOM (PowerShell `Set-Content
   -Encoding UTF8` adds one and breaks `JSON.parse`); use a BOM-free file.
+- **Client galleries — full workflow proven.** First real gallery is the
+  "2013 Viper GTS" (access code `viper-b8p2b7wd`, 81 photos). Pattern:
+  generate ~2048px web previews + keep full-res, upload both to R2 under
+  `galleries/<slug>/viper-NN.jpg` (preview) and
+  `galleries/<slug>/originals/viper-NN.jpg` (full-res), then a KV entry
+  with `photoKeys` (previews) and `downloadKeys` (full-res), index-aligned.
+  HEIC inputs are converted to JPEG via WIC (System.Drawing can't decode
+  HEIC). Staging originals live in `C:\staging\galleries\<slug>\`.
+- **Client-gallery full-res download.** `/api/gallery-download/{token}/{key}`
+  token-gates against `downloadKeys` and serves the original as an
+  attachment. The gallery page shows previews with a per-photo "↓ Full-res"
+  link plus a "Download all" button.
 
 ## Still needed before a real launch
 
-1. **Upload real client gallery photos to R2** and create real gallery
-   entries in KV:
-       wrangler kv key put --namespace-id 8d54027017b04c1e81d851f7992e266c \
-         "<token>" --path gallery.json --remote
-   where gallery.json is {"clientName":"...","photoKeys":["..."]} (no BOM)
-   and each photoKey is a real object in the `no-reserve-photos` bucket.
+1. **Add more client galleries as needed** using the proven workflow
+   above (previews + originals to R2, KV entry with photoKeys +
+   downloadKeys, BOM-free). One real gallery (Viper GTS) exists so far.
 2. **Drop in real placeholder swaps** — hero photo, carousel images,
    about image. (Wallpaper card thumbnails are done.)
 3. **Switch Stripe to live mode** and confirm the webhook secret +

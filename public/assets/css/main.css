@@ -428,6 +428,45 @@ main { padding-top: var(--nav-height); }
 }
 .gallery-grid .placeholder-box { height: 240px; }
 
+/* Each gallery photo: preview image + hover-in full-res download */
+.gallery-grid .gallery-item {
+  position: relative;
+  break-inside: avoid;
+  margin: 0 0 var(--space-sm);
+}
+.gallery-grid .gallery-item img {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+.gallery-item__dl {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(26, 26, 26, 0.85);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.6rem;
+  opacity: 0;
+  transition: opacity 0.15s ease, border-color 0.2s ease;
+}
+.gallery-item:hover .gallery-item__dl { opacity: 1; }
+.gallery-item__dl:hover { border-color: var(--accent); }
+/* Touch devices have no hover — keep the download affordance visible */
+@media (hover: none) { .gallery-item__dl { opacity: 1; } }
+
+/* Download-all toolbar above the grid */
+.gallery-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+.gallery-toolbar__count { color: var(--text-muted); }
+
 .is-hidden { display: none !important; }
 
 /* ---------------------------------------------------------------------
