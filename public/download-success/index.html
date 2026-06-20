@@ -34,16 +34,37 @@
 
   <main>
     <!-- Stripe redirects here on success: /download-success?session_id=...
-         Download delivery isn't wired up yet — this page just kills the 404. -->
+         The download button hits /api/download?session_id=..., which
+         verifies the session was paid before streaming the file from R2. -->
     <section class="message-page">
       <div class="container">
         <h1>Thank You</h1>
-        <p>Thank you for your purchase! Your download will be available shortly.</p>
+        <p>Thank you for your purchase! Your download is ready below.</p>
+        <p id="download-slot">
+          <!-- A "Download" button is injected here when a session_id is present. -->
+        </p>
         <p><a class="btn btn--ghost" href="/wallpapers/">Back to Wallpapers</a></p>
       </div>
     </section>
   </main>
 
   <script src="/assets/js/main.js"></script>
+
+  <script>
+    (function () {
+      var sessionId = new URLSearchParams(window.location.search).get('session_id');
+      var slot = document.getElementById('download-slot');
+      if (sessionId) {
+        var a = document.createElement('a');
+        a.className = 'btn btn--primary';
+        a.href = '/api/download?session_id=' + encodeURIComponent(sessionId);
+        a.textContent = 'Download Wallpaper';
+        slot.appendChild(a);
+      } else {
+        // No session id (e.g. someone hit the page directly).
+        slot.textContent = 'If you just purchased, return via your Stripe receipt link to download.';
+      }
+    })();
+  </script>
 </body>
 </html>

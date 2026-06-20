@@ -1,6 +1,6 @@
 # No Reserve Photography — Site Build Status
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 ## What this is
 
@@ -16,13 +16,34 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
 
 ## Architecture
 
-- `public/` — static HTML (homepage, /wallpapers/, /gallery/)
+- `public/` — static HTML pages, all sharing one design system:
+  - `/` homepage, `/wallpapers/` storefront, `/client-galleries/`
+    token gallery, `/download-success/` post-purchase page
+  - `assets/css/main.css` (shared dark-charcoal design system),
+    `assets/js/main.js` (shared nav toggle); page-specific JS is inline
+  - logo PNGs live at the repo root of `public/`, underscore-named
+    (`Logo_Rectangular_Transp_Back.png`, `Logo_Circular_PNG.png`, …)
 - `src/index.js` — single Worker script, handles all of `/api/*`,
   falls through to static assets for everything else
+- `src/catalog.js` — server-side wallpaper catalog (photoId →
+  name/priceCents/r2Key). Source of truth for price + R2 mapping.
 - `wrangler.jsonc` — ties together assets directory, Worker entry point,
-  and bindings (R2, KV)
+  and bindings (R2 bound; KV not yet — see below)
 - Deploys automatically via Cloudflare Workers Builds on push to `main`
   (GitHub integration, not manual upload)
+
+## API routes (`src/index.js`)
+
+- `POST /api/checkout` — creates a Stripe Checkout Session. Price + name
+  now looked up server-side from `catalog.js` by photoId (browser input
+  for price is ignored).
+- `POST /api/webhook` — Stripe `checkout.session.completed`. Signature
+  verified for real; fails closed if the secret is missing.
+- `GET /api/download?session_id=...` — verifies the session is paid via
+  Stripe, then streams the purchased wallpaper from R2 as an attachment.
+- `GET /api/gallery/{token}` — returns a client gallery's JSON from KV.
+- `GET /api/photo/{token}/{photoKey}` — token-gated; verifies the key
+  belongs to that gallery, then streams the photo from R2.
 
 ## Confirmed working (tested 2026-06-18)
 
@@ -36,30 +57,39 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
 - R2 bucket `no-reserve-photos` created and bound as `PHOTOS_BUCKET`
 - Stripe is in **test mode** (sk_test_/whsec_ keys in Cloudflare env vars)
 
-## Deliberately stubbed — needs real implementation before any real launch
+## Resolved since 2026-06-18
 
-1. **Webhook signature verification** (`src/index.js`,
-   `verifyStripeSignature()`) always returns `true`. This is a real
-   security hole, not a TODO comment for show — without it, anyone who
-   finds the webhook URL could fake a "payment succeeded" event.
-2. **Price trust** — `priceCents` in `/api/checkout` comes straight from
-   whatever the browser sends. Proven exploitable by literally calling
-   `buyPhoto()` from the console with any price. Needs a server-side
-   price list the Worker checks against instead of trusting client input.
-3. **No download fulfillment** — webhook logs the photoId but doesn't
-   yet look up the R2 object, generate a signed URL, or deliver it
-   anywhere.
-4. **No `/download-success` page** — currently a plain 404.
-5. **No real photos** — wallpaper grid and client gallery pages are
-   empty placeholders.
-6. **KV namespace for client galleries** — was stripped from
-   wrangler.jsonc early on (placeholder ID, no real namespace created
-   yet). Needed before the client-gallery-by-token feature works at all.
-7. **No design pass** — every page is bare HTML, no branding applied yet.
+- **Design pass done.** All pages rebuilt on a shared dark-charcoal
+  design system (Inter body / Oswald condensed headings, sharp edges,
+  fixed nav with mobile hamburger, brightness hover). Old bare-HTML
+  pages replaced. Old `/gallery/` page removed; replaced by
+  `/client-galleries/`.
+- **Webhook signature verification** — real HMAC-SHA256 against Stripe's
+  scheme with replay protection; fails closed if the secret is unset.
+- **Price trust** — fixed. `/api/checkout` reads price/name from
+  `src/catalog.js`, never from the request body.
+- **Download fulfillment** — `/api/download` verifies the Stripe session
+  is paid, then streams the file from R2. `/download-success` shows a
+  Download button wired to it.
 
-## Not yet decided
+## Still needed before a real launch
 
-Which to build out first: the public wallpaper storefront, or the
-private client gallery delivery flow (the more business-critical one,
-since that's what auction clients actually need). Worth deciding before
-diving into either.
+1. **Bind the GALLERIES KV namespace.** Not bound yet (a placeholder ID
+   broke deploys earlier, so it's deliberately absent). `/api/gallery`
+   and `/api/photo` return 503 until it's set up:
+       wrangler kv namespace create GALLERIES
+   then add to wrangler.jsonc:
+       "kv_namespaces": [{ "binding": "GALLERIES", "id": "<real id>" }]
+   The wallpaper download flow does NOT depend on this.
+2. **Upload real photos to R2.** Wallpapers must land at the keys in
+   `catalog.js` (`wallpapers/wallpaper-01.jpg` …). Gallery photos must
+   match each gallery's `photoKeys`. Until then `/api/download` and
+   `/api/photo` return 404 ("file not available yet").
+3. **Create client gallery entries in KV** (after step 1):
+       key: "<token>"  value: {"clientName":"...","photoKeys":["..."]}
+4. **Drop in real placeholder swaps** — hero photo, carousel images,
+   about image, wallpaper card images, wallpaper titles/prices.
+5. **Switch Stripe to live mode** and confirm the webhook secret +
+   keys are the live ones before taking real money.
+6. **Footer links** — Instagram and Bring a Trailer hrefs are still `#`.
+7. **Custom domain** — wire noreservephotography.com to the Worker.

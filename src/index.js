@@ -12,6 +12,8 @@
 // for it to work, as long as your /api/* paths don't collide with
 // real files in /public.
 
+import { getWallpaper } from "./catalog.js";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -24,9 +26,27 @@ export default {
       return handleWebhook(request, env);
     }
 
+    // Paid wallpaper download. The session_id Stripe puts on the
+    // success_url is the proof of purchase — we verify it server-side.
+    if (url.pathname === "/api/download" && request.method === "GET") {
+      return handleDownload(request, env);
+    }
+
     const galleryMatch = url.pathname.match(/^\/api\/gallery\/([^/]+)$/);
     if (galleryMatch && request.method === "GET") {
       return handleGalleryLookup(galleryMatch[1], env);
+    }
+
+    // Private client-gallery image: /api/photo/{token}/{photoKey}.
+    // The trailing (.+) lets photoKeys contain slashes. We verify the key
+    // belongs to that gallery token before streaming anything from R2.
+    const photoMatch = url.pathname.match(/^\/api\/photo\/([^/]+)\/(.+)$/);
+    if (photoMatch && request.method === "GET") {
+      return handlePhoto(
+        decodeURIComponent(photoMatch[1]),
+        decodeURIComponent(photoMatch[2]),
+        env
+      );
     }
 
     // Nothing matched above — let static assets handle it (this will
@@ -51,9 +71,16 @@ async function handleCheckout(request, env) {
     return new Response("Invalid request body", { status: 400 });
   }
 
-  const { photoId, photoName, priceCents } = body;
-  if (!photoId || !priceCents) {
-    return new Response("Missing photoId or priceCents", { status: 400 });
+  const { photoId } = body;
+  if (!photoId) {
+    return new Response("Missing photoId", { status: 400 });
+  }
+
+  // Price and name come from the server-side catalog, NEVER from the
+  // request body. The browser only gets to pick *which* product.
+  const item = getWallpaper(photoId);
+  if (!item) {
+    return new Response("Unknown photoId", { status: 400 });
   }
 
   const origin = new URL(request.url).origin;
@@ -61,8 +88,8 @@ async function handleCheckout(request, env) {
   const params = new URLSearchParams({
     mode: "payment",
     "line_items[0][price_data][currency]": "usd",
-    "line_items[0][price_data][product_data][name]": photoName || `Photo ${photoId}`,
-    "line_items[0][price_data][unit_amount]": String(priceCents),
+    "line_items[0][price_data][product_data][name]": item.name,
+    "line_items[0][price_data][unit_amount]": String(item.priceCents),
     "line_items[0][quantity]": "1",
     success_url: `${origin}/download-success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/wallpapers/`,
@@ -233,9 +260,138 @@ function timingSafeEqual(a, b) {
 //   value: {"clientName":"Smith Targa","photoKeys":["smith-1.jpg"]}
 // ---------------------------------------------------------------------
 async function handleGalleryLookup(token, env) {
+  // The GALLERIES KV namespace isn't bound until a real namespace is
+  // created and added to wrangler.jsonc. Fail clearly instead of throwing.
+  if (!env.GALLERIES) {
+    return new Response("Galleries not configured", { status: 503 });
+  }
   const raw = await env.GALLERIES.get(token);
   if (!raw) {
     return new Response("Gallery not found", { status: 404 });
   }
   return new Response(raw, { headers: { "Content-Type": "application/json" } });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/download?session_id=... — delivers a paid wallpaper.
+//
+// The success_url Stripe redirects to carries the Checkout Session id.
+// We retrieve that session straight from Stripe and only serve the file
+// if payment_status === "paid". This is more reliable than waiting on the
+// webhook (which can lag), and the session id can't be forged — an
+// attacker would have to actually pay.
+// ---------------------------------------------------------------------
+async function handleDownload(request, env) {
+  const sessionId = new URL(request.url).searchParams.get("session_id");
+  if (!sessionId) {
+    return new Response("Missing session_id", { status: 400 });
+  }
+  if (!env.STRIPE_SECRET_KEY) {
+    return new Response("Checkout not configured", { status: 500 });
+  }
+
+  // Verify the purchase with Stripe.
+  const stripeRes = await fetch(
+    `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+    { headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` } }
+  );
+  if (!stripeRes.ok) {
+    return new Response("Could not verify purchase", { status: 404 });
+  }
+  const session = await stripeRes.json();
+  if (session.payment_status !== "paid") {
+    return new Response("Payment not completed", { status: 402 });
+  }
+
+  // Map the purchased photoId back to its R2 object via the catalog.
+  const photoId = session.metadata?.photoId;
+  const item = photoId ? getWallpaper(photoId) : null;
+  if (!item) {
+    return new Response("Purchased item not found", { status: 404 });
+  }
+
+  const object = await env.PHOTOS_BUCKET.get(item.r2Key);
+  if (!object) {
+    // Paid for, but the file hasn't been uploaded to R2 yet.
+    return new Response("File not available yet", { status: 404 });
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers); // content-type etc. stored on the object
+  if (!headers.get("content-type")) {
+    headers.set("content-type", contentTypeFor(item.r2Key));
+  }
+  headers.set("etag", object.httpEtag);
+  headers.set("Cache-Control", "private, no-store");
+  // Force a download with a sensible filename rather than rendering inline.
+  const filename = item.r2Key.split("/").pop();
+  headers.set("Content-Disposition", `attachment; filename="${filename}"`);
+
+  return new Response(object.body, { headers });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/photo/{token}/{photoKey} — streams one private gallery photo.
+//
+// Token-gated: we look up the gallery by its secret token and only serve
+// the object if photoKey is actually one of that gallery's photoKeys.
+// That stops someone from pulling arbitrary objects out of the bucket by
+// guessing keys.
+// ---------------------------------------------------------------------
+async function handlePhoto(token, photoKey, env) {
+  if (!env.GALLERIES) {
+    return new Response("Galleries not configured", { status: 503 });
+  }
+
+  const raw = await env.GALLERIES.get(token);
+  if (!raw) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  let gallery;
+  try {
+    gallery = JSON.parse(raw);
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const keys = Array.isArray(gallery.photoKeys) ? gallery.photoKeys : [];
+  if (!keys.includes(photoKey)) {
+    // Key isn't part of this gallery — same 404 as a missing gallery so
+    // we don't confirm which keys exist.
+    return new Response("Not found", { status: 404 });
+  }
+
+  const object = await env.PHOTOS_BUCKET.get(photoKey);
+  if (!object) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  if (!headers.get("content-type")) {
+    headers.set("content-type", contentTypeFor(photoKey));
+  }
+  headers.set("etag", object.httpEtag);
+  // Private: it's a client's gallery. Allow brief reuse within the browser.
+  headers.set("Cache-Control", "private, max-age=3600");
+
+  return new Response(object.body, { headers });
+}
+
+// Minimal extension -> MIME fallback for objects stored in R2 without
+// content-type metadata. Browsers sniff images anyway, but a correct
+// header avoids surprises.
+function contentTypeFor(key) {
+  const ext = key.split(".").pop().toLowerCase();
+  const map = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    avif: "image/avif",
+    tiff: "image/tiff",
+  };
+  return map[ext] || "application/octet-stream";
 }

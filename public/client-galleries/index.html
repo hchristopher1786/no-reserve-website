@@ -119,19 +119,18 @@
 
         // 200 -> { clientName: string, photoKeys: string[] }
         var gallery = await res.json();
-        renderGallery(gallery);
+        renderGallery(token, gallery);
       });
 
-      function renderGallery(gallery) {
+      function renderGallery(token, gallery) {
         nameEl.textContent = gallery.clientName || 'Your Gallery';
 
         grid.innerHTML = '';
         (gallery.photoKeys || []).forEach(function (key) {
-          // NOTE: /api/photo/{photoKey} does NOT exist yet. It will be the
-          // R2 signed-URL endpoint we build next (download fulfillment phase).
-          // Until then these <img> tags will fail to load — that's expected.
+          // Token-gated R2 endpoint: the Worker verifies this key belongs
+          // to this gallery before streaming the image.
           var img = document.createElement('img');
-          img.src = '/api/photo/' + encodeURIComponent(key);
+          img.src = '/api/photo/' + encodeURIComponent(token) + '/' + encodeURIComponent(key);
           img.alt = (gallery.clientName ? gallery.clientName + ' — ' : '') + key;
           img.loading = 'lazy';
           grid.appendChild(img);
