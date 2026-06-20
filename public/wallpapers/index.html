@@ -42,68 +42,10 @@
       </div>
     </section>
 
-    <!-- ===== Storefront grid ===== -->
-    <!-- Real wallpaper photos go in public/assets/wallpapers/ — replace the
-         placeholder divs with <img> tags pointing to those paths. -->
+    <!-- ===== Storefront grid (rendered from the catalog by JS below) ===== -->
     <section class="section">
       <div class="container">
-        <div class="wallpaper-grid">
-
-          <article class="wallpaper-card">
-            <div class="wallpaper-card__media placeholder-box">Wallpaper 1 (16:9)</div>
-            <div class="wallpaper-card__body">
-              <span class="wallpaper-card__title">Wallpaper Title</span>
-              <span class="wallpaper-card__price">$1.00</span>
-              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-01', 'Wallpaper Title', 100)">Buy &amp; Download</button>
-            </div>
-          </article>
-
-          <article class="wallpaper-card">
-            <div class="wallpaper-card__media placeholder-box">Wallpaper 2 (16:9)</div>
-            <div class="wallpaper-card__body">
-              <span class="wallpaper-card__title">Wallpaper Title</span>
-              <span class="wallpaper-card__price">$1.00</span>
-              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-02', 'Wallpaper Title', 100)">Buy &amp; Download</button>
-            </div>
-          </article>
-
-          <article class="wallpaper-card">
-            <div class="wallpaper-card__media placeholder-box">Wallpaper 3 (16:9)</div>
-            <div class="wallpaper-card__body">
-              <span class="wallpaper-card__title">Wallpaper Title</span>
-              <span class="wallpaper-card__price">$1.00</span>
-              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-03', 'Wallpaper Title', 100)">Buy &amp; Download</button>
-            </div>
-          </article>
-
-          <article class="wallpaper-card">
-            <div class="wallpaper-card__media placeholder-box">Wallpaper 4 (16:9)</div>
-            <div class="wallpaper-card__body">
-              <span class="wallpaper-card__title">Wallpaper Title</span>
-              <span class="wallpaper-card__price">$1.00</span>
-              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-04', 'Wallpaper Title', 100)">Buy &amp; Download</button>
-            </div>
-          </article>
-
-          <article class="wallpaper-card">
-            <div class="wallpaper-card__media placeholder-box">Wallpaper 5 (16:9)</div>
-            <div class="wallpaper-card__body">
-              <span class="wallpaper-card__title">Wallpaper Title</span>
-              <span class="wallpaper-card__price">$1.00</span>
-              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-05', 'Wallpaper Title', 100)">Buy &amp; Download</button>
-            </div>
-          </article>
-
-          <article class="wallpaper-card">
-            <div class="wallpaper-card__media placeholder-box">Wallpaper 6 (16:9)</div>
-            <div class="wallpaper-card__body">
-              <span class="wallpaper-card__title">Wallpaper Title</span>
-              <span class="wallpaper-card__price">$1.00</span>
-              <button class="btn btn--primary" onclick="buyPhoto('wallpaper-06', 'Wallpaper Title', 100)">Buy &amp; Download</button>
-            </div>
-          </article>
-
-        </div>
+        <div class="wallpaper-grid" id="wallpaper-grid"></div>
       </div>
     </section>
 
@@ -123,10 +65,112 @@
 
   <script src="/assets/js/main.js"></script>
 
+  <!-- ===== Catalog + storefront rendering =====
+       This list mirrors the entries in src/catalog.js. No bundler here, so
+       it's inlined as plain data. If you change names/prices, update both
+       this array AND src/catalog.js (the Worker trusts catalog.js for the
+       actual charge — this array is display-only). -->
+  <script>
+    const WALLPAPERS = [
+      { id: "wallpaper-01", name: "Wallpaper 01" },
+      { id: "wallpaper-02", name: "Wallpaper 02" },
+      { id: "wallpaper-03", name: "Wallpaper 03" },
+      { id: "wallpaper-04", name: "Wallpaper 04" },
+      { id: "wallpaper-05", name: "Wallpaper 05" },
+      { id: "wallpaper-06", name: "Wallpaper 06" },
+      { id: "wallpaper-07", name: "Wallpaper 07" },
+      { id: "wallpaper-08", name: "Wallpaper 08" },
+      { id: "wallpaper-09", name: "Wallpaper 09" },
+      { id: "wallpaper-10", name: "Wallpaper 10" },
+      { id: "wallpaper-11", name: "Wallpaper 11" },
+      { id: "wallpaper-12", name: "Wallpaper 12" },
+      { id: "wallpaper-13", name: "Wallpaper 13" },
+      { id: "wallpaper-14", name: "Wallpaper 14" },
+      { id: "wallpaper-15", name: "Wallpaper 15" },
+      { id: "wallpaper-16", name: "Wallpaper 16" },
+      { id: "wallpaper-17", name: "Wallpaper 17" },
+      { id: "wallpaper-18", name: "Wallpaper 18" },
+      { id: "wallpaper-19", name: "Wallpaper 19" },
+      { id: "wallpaper-20", name: "Wallpaper 20" },
+      { id: "wallpaper-21", name: "Wallpaper 21" },
+      { id: "wallpaper-22", name: "Wallpaper 22" },
+      { id: "wallpaper-23", name: "Wallpaper 23" },
+      { id: "wallpaper-24", name: "Wallpaper 24" },
+      { id: "wallpaper-25", name: "Wallpaper 25" },
+      { id: "wallpaper-26", name: "Wallpaper 26" },
+      { id: "wallpaper-27", name: "Wallpaper 27" },
+      { id: "wallpaper-28", name: "Wallpaper 28" },
+      { id: "wallpaper-29", name: "Wallpaper 29" },
+      { id: "wallpaper-30", name: "Wallpaper 30" },
+      { id: "wallpaper-31", name: "Wallpaper 31" },
+      { id: "wallpaper-32", name: "Wallpaper 32" },
+      { id: "wallpaper-33", name: "Wallpaper 33" },
+      { id: "wallpaper-34", name: "Wallpaper 34" },
+      { id: "wallpaper-35", name: "Wallpaper 35" },
+      { id: "wallpaper-36", name: "Wallpaper 36" },
+      { id: "wallpaper-37", name: "Wallpaper 37" },
+      { id: "wallpaper-38", name: "Wallpaper 38" },
+      { id: "wallpaper-39", name: "Wallpaper 39" },
+      { id: "wallpaper-40", name: "Wallpaper 40" },
+      { id: "wallpaper-41", name: "Wallpaper 41" },
+      { id: "wallpaper-42", name: "Wallpaper 42" },
+      { id: "wallpaper-43", name: "Wallpaper 43" },
+      { id: "wallpaper-44", name: "Wallpaper 44" },
+      { id: "wallpaper-45", name: "Wallpaper 45" },
+      { id: "wallpaper-46", name: "Wallpaper 46" },
+      { id: "wallpaper-47", name: "Wallpaper 47" },
+      { id: "wallpaper-48", name: "Wallpaper 48" },
+      { id: "wallpaper-49", name: "Wallpaper 49" },
+      { id: "wallpaper-50", name: "Wallpaper 50" },
+      { id: "wallpaper-51", name: "Wallpaper 51" },
+    ];
+
+    // Render one card per wallpaper. The media area is a placeholder for now —
+    // drop in <img> thumbnails later (e.g. a watermarked preview from R2).
+    (function renderWallpapers() {
+      const grid = document.getElementById('wallpaper-grid');
+      if (!grid) return;
+
+      WALLPAPERS.forEach(function (w) {
+        const card = document.createElement('article');
+        card.className = 'wallpaper-card';
+
+        const media = document.createElement('div');
+        media.className = 'wallpaper-card__media placeholder-box';
+        media.textContent = w.name;
+
+        const body = document.createElement('div');
+        body.className = 'wallpaper-card__body';
+
+        const title = document.createElement('span');
+        title.className = 'wallpaper-card__title';
+        title.textContent = w.name;
+
+        const price = document.createElement('span');
+        price.className = 'wallpaper-card__price';
+        price.textContent = '$1.00';
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn--primary';
+        btn.textContent = 'Buy & Download';
+        btn.addEventListener('click', function () { buyPhoto(w.id, w.name, 100); });
+
+        body.appendChild(title);
+        body.appendChild(price);
+        body.appendChild(btn);
+        card.appendChild(media);
+        card.appendChild(body);
+        grid.appendChild(card);
+      });
+    })();
+  </script>
+
   <!-- ===== Checkout ===== -->
   <script>
     // Posts to the existing Worker route /api/checkout, which creates a
-    // Stripe Checkout Session and returns its hosted URL.
+    // Stripe Checkout Session and returns its hosted URL. The Worker looks
+    // up the real price from src/catalog.js by photoId — priceCents sent
+    // here is ignored server-side (kept for the call signature only).
     // priceCents: 100 = $1.00
     async function buyPhoto(photoId, photoName, priceCents) {
       const res = await fetch('/api/checkout', {
