@@ -13,6 +13,7 @@
 // real files in /public.
 
 import { getWallpaper } from "./catalog.js";
+import { crc32, buildLocalHeader, buildCentralHeader, buildEnd } from "./zip.js";
 
 export default {
   async fetch(request, env) {
@@ -59,6 +60,13 @@ export default {
         decodeURIComponent(galDownloadMatch[2]),
         env
       );
+    }
+
+    // Whole-gallery ZIP: /api/gallery-zip/{token}. Streams every full-res
+    // original (downloadKeys) as a single STORE archive, built on the fly.
+    const galZipMatch = url.pathname.match(/^\/api\/gallery-zip\/([^/]+)$/);
+    if (galZipMatch && request.method === "GET") {
+      return handleGalleryZip(decodeURIComponent(galZipMatch[1]), env);
     }
 
     // Nothing matched above — let static assets handle it (this will
@@ -436,6 +444,96 @@ async function handleGalleryDownload(token, key, env) {
   headers.set("Content-Disposition", `attachment; filename="${filename}"`);
 
   return new Response(object.body, { headers });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/gallery-zip/{token} — streams every full-res original in the
+// gallery as one STORE (uncompressed) ZIP, built on the fly.
+//
+// Memory stays bounded to ~one file: we buffer each object, compute its
+// CRC, write its local header + bytes, then move on. Backpressure from
+// the response stream throttles us to the client's download speed.
+// ---------------------------------------------------------------------
+async function handleGalleryZip(token, env) {
+  if (!env.GALLERIES) {
+    return new Response("Galleries not configured", { status: 503 });
+  }
+
+  const raw = await env.GALLERIES.get(token);
+  if (!raw) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  let gallery;
+  try {
+    gallery = JSON.parse(raw);
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const keys = Array.isArray(gallery.downloadKeys) ? gallery.downloadKeys : [];
+  if (keys.length === 0) {
+    return new Response("Nothing to download", { status: 404 });
+  }
+
+  const enc = new TextEncoder();
+  const slug = slugify(gallery.clientName || token);
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+
+  (async () => {
+    try {
+      const central = [];
+      let offset = 0;
+      for (const key of keys) {
+        const object = await env.PHOTOS_BUCKET.get(key);
+        if (!object) continue; // skip anything missing rather than abort
+        const data = new Uint8Array(await object.arrayBuffer());
+        const crc = crc32(data);
+        const date = object.uploaded ? new Date(object.uploaded) : new Date();
+        // Entry name: put everything under a folder named for the client.
+        const nameBytes = enc.encode(`${slug}/${key.split("/").pop()}`);
+
+        const lh = buildLocalHeader({ nameBytes, crc, size: data.length, date });
+        await writer.write(lh);
+        await writer.write(data);
+        central.push({ nameBytes, crc, size: data.length, offset, date });
+        offset += lh.length + data.length;
+      }
+
+      let cdSize = 0;
+      for (const e of central) {
+        const ch = buildCentralHeader(e);
+        await writer.write(ch);
+        cdSize += ch.length;
+      }
+      await writer.write(buildEnd({ count: central.length, cdSize, cdOffset: offset }));
+      await writer.close();
+    } catch (err) {
+      // The response stream may have already started; aborting signals the
+      // client the archive is incomplete rather than leaving a valid-looking
+      // truncated file.
+      await writer.abort(err);
+    }
+  })();
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${slug}.zip"`,
+      "Cache-Control": "private, no-store",
+    },
+  });
+}
+
+// Lowercase, hyphenated slug for filenames (e.g. "2013 Viper GTS" ->
+// "2013-viper-gts"). Falls back to "gallery" if nothing usable remains.
+function slugify(s) {
+  const out = String(s)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return out || "gallery";
 }
 
 // Minimal extension -> MIME fallback for objects stored in R2 without

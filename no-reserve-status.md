@@ -94,7 +94,13 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
 - **Client-gallery full-res download.** `/api/gallery-download/{token}/{key}`
   token-gates against `downloadKeys` and serves the original as an
   attachment. The gallery page shows previews with a per-photo "↓ Full-res"
-  link plus a "Download all" button.
+  link.
+- **Whole-gallery ZIP.** `/api/gallery-zip/{token}` streams every full-res
+  original as one STORE (uncompressed — JPEGs don't deflate) archive, built
+  on the fly via `src/zip.js`. Buffers one file at a time so memory stays
+  ~one file regardless of archive size; ZIP64 kicks in only past 4GB.
+  Designed for galleries up to a few GB; note it is NOT resumable (a dropped
+  connection restarts). The "Download all (ZIP)" button points at it.
 
 ## Still needed before a real launch
 

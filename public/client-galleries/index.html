@@ -63,7 +63,7 @@
         <h2 class="section__heading" id="gallery-client-name"><!-- clientName injected here --></h2>
         <div class="gallery-toolbar is-hidden" id="gallery-toolbar">
           <span class="gallery-toolbar__count" id="gallery-count"></span>
-          <button type="button" class="btn btn--primary" id="download-all">Download all (full-res)</button>
+          <a class="btn btn--primary" id="download-all" href="#">Download all (ZIP)</a>
         </div>
         <div class="gallery-grid" id="gallery-grid"></div>
       </div>
@@ -168,11 +168,12 @@
           grid.appendChild(fig);
         });
 
-        // Download-all toolbar — only when full-res keys are available.
+        // Download-all toolbar — a single streamed ZIP of every full-res
+        // original. Shown only when the gallery has full-res keys.
         if (downloadKeys.length) {
           countEl.textContent = photoKeys.length + ' photos';
+          downloadAllBtn.href = '/api/gallery-zip/' + encodeURIComponent(token);
           toolbar.classList.remove('is-hidden');
-          downloadAllBtn.onclick = function () { downloadAll(token, downloadKeys); };
         } else {
           toolbar.classList.add('is-hidden');
         }
@@ -180,25 +181,6 @@
         // Swap the form out for the results.
         accessSection.classList.add('is-hidden');
         resultsSection.classList.remove('is-hidden');
-      }
-
-      // Trigger each full-res download in turn. Browsers may ask to allow
-      // multiple downloads; the short delay keeps them from being dropped.
-      async function downloadAll(token, downloadKeys) {
-        var orig = downloadAllBtn.textContent;
-        downloadAllBtn.disabled = true;
-        for (var i = 0; i < downloadKeys.length; i++) {
-          downloadAllBtn.textContent = 'Downloading ' + (i + 1) + ' / ' + downloadKeys.length + '…';
-          var a = document.createElement('a');
-          a.href = downloadHref(token, downloadKeys[i]);
-          a.setAttribute('download', '');
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          await new Promise(function (r) { setTimeout(r, 700); });
-        }
-        downloadAllBtn.textContent = orig;
-        downloadAllBtn.disabled = false;
       }
     })();
   </script>
