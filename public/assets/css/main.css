@@ -344,6 +344,13 @@ main { padding-top: var(--nav-height); }
 .wallpaper-card__media {
   aspect-ratio: 16 / 9;
   width: 100%;
+  overflow: hidden; /* crop the thumbnail to the 16:9 frame */
+}
+.wallpaper-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* fill the frame, center-crop, no distortion */
+  display: block;
 }
 .wallpaper-card__body {
   padding: var(--space-sm);
