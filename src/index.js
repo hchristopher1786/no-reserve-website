@@ -478,46 +478,56 @@ async function handleGalleryZip(token, env) {
 
   const enc = new TextEncoder();
   const slug = slugify(gallery.clientName || token);
-  const { readable, writable } = new TransformStream();
-  const writer = writable.getWriter();
 
-  (async () => {
-    try {
-      const central = [];
-      let offset = 0;
-      for (const key of keys) {
-        const object = await env.PHOTOS_BUCKET.get(key);
-        if (!object) continue; // skip anything missing rather than abort
-        const data = new Uint8Array(await object.arrayBuffer());
-        const crc = crc32(data);
-        const date = object.uploaded ? new Date(object.uploaded) : new Date();
-        // Entry name: put everything under a folder named for the client.
-        const nameBytes = enc.encode(`${slug}/${key.split("/").pop()}`);
+  // Async generator yields the archive byte-chunk by byte-chunk. Driving a
+  // pull-based ReadableStream from it means the runtime only advances us when
+  // the client is ready for more — so memory stays ~one file regardless of
+  // total archive size (an eager writer buffers and trips the 128MB limit).
+  async function* zipChunks() {
+    const central = [];
+    let offset = 0;
+    for (const key of keys) {
+      const object = await env.PHOTOS_BUCKET.get(key);
+      if (!object) continue; // skip anything missing rather than abort
+      const data = new Uint8Array(await object.arrayBuffer());
+      const crc = crc32(data);
+      const date = object.uploaded ? new Date(object.uploaded) : new Date();
+      // Entry name: put everything under a folder named for the client.
+      const nameBytes = enc.encode(`${slug}/${key.split("/").pop()}`);
 
-        const lh = buildLocalHeader({ nameBytes, crc, size: data.length, date });
-        await writer.write(lh);
-        await writer.write(data);
-        central.push({ nameBytes, crc, size: data.length, offset, date });
-        offset += lh.length + data.length;
-      }
-
-      let cdSize = 0;
-      for (const e of central) {
-        const ch = buildCentralHeader(e);
-        await writer.write(ch);
-        cdSize += ch.length;
-      }
-      await writer.write(buildEnd({ count: central.length, cdSize, cdOffset: offset }));
-      await writer.close();
-    } catch (err) {
-      // The response stream may have already started; aborting signals the
-      // client the archive is incomplete rather than leaving a valid-looking
-      // truncated file.
-      await writer.abort(err);
+      const lh = buildLocalHeader({ nameBytes, crc, size: data.length, date });
+      yield lh;
+      yield data;
+      central.push({ nameBytes, crc, size: data.length, offset, date });
+      offset += lh.length + data.length;
     }
-  })();
 
-  return new Response(readable, {
+    let cdSize = 0;
+    for (const e of central) {
+      const ch = buildCentralHeader(e);
+      yield ch;
+      cdSize += ch.length;
+    }
+    yield buildEnd({ count: central.length, cdSize, cdOffset: offset });
+  }
+
+  const iterator = zipChunks();
+  const stream = new ReadableStream({
+    async pull(controller) {
+      try {
+        const { value, done } = await iterator.next();
+        if (done) controller.close();
+        else controller.enqueue(value);
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+    cancel() {
+      if (iterator.return) iterator.return();
+    },
+  });
+
+  return new Response(stream, {
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="${slug}.zip"`,
