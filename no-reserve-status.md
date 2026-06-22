@@ -107,11 +107,21 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
        full-res originals (entries named `<slug>/viper-NN.jpg`), STORE mode.
     2. Upload to R2 at `galleries/<slug>/all.zip`. NOTE: both `wrangler r2
        object put` (~315 MiB) and the R2 dashboard (300 MB) cap single
-       uploads, so a ~1GB archive needs MULTIPART. There are no S3 tools on
-       this machine; we used a temporary secret-guarded Worker multipart
-       endpoint (`/api/_mpu`, since removed) driven by a local 50-MiB-part
-       script. For future big uploads, re-add that endpoint or set up an R2
-       S3 API token + multipart tool (aws-cli/rclone).
+       uploads, so a ~1GB archive needs MULTIPART. Use **rclone** (installed
+       via `winget install Rclone.Rclone`); it auto-multiparts with no size
+       cap. The configured rclone remote is named **`S3`** (misnomer — it
+       points at THIS R2 bucket over the S3-compatible API; the name is just
+       a label, not a different provider/account).
+         One-time setup: create an R2 S3 API token (dashboard → R2 → Manage
+         R2 API Tokens → Object Read & Write, scoped to `no-reserve-photos`),
+         then `rclone config` a remote named `S3`, type `s3`, provider
+         Cloudflare, with that token and endpoint
+         `https://<account-id>.r2.cloudflarestorage.com`, region `auto`.
+         Upload command:
+           rclone copyto "C:\staging\galleries\<slug>\all.zip" \
+             S3:no-reserve-photos/galleries/<slug>/all.zip --s3-no-check-bucket
+       (The earlier temporary `/api/_mpu` Worker endpoint is removed and no
+       longer needed now that rclone handles large uploads.)
     3. Set `zipKey` in the gallery's KV entry.
   DONE for the Viper gallery: `all.zip` (964,474,792 bytes, 81 files) is
   uploaded to `galleries/2013-viper-gts/all.zip` and verified live end to
