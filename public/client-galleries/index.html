@@ -96,11 +96,8 @@
       var nameEl = document.getElementById('gallery-client-name');
       var grid = document.getElementById('gallery-grid');
 
-      form.addEventListener('submit', async function (e) {
-        e.preventDefault();
+      async function loadGallery(token) {
         errorEl.textContent = '';
-
-        var token = input.value.trim();
         if (!token) return;
 
         var res;
@@ -124,6 +121,11 @@
         // 200 -> { clientName, photoKeys: string[], downloadKeys?: string[] }
         var gallery = await res.json();
         renderGallery(token, gallery);
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        loadGallery(input.value.trim());
       });
 
       var toolbar = document.getElementById('gallery-toolbar');
@@ -181,6 +183,15 @@
         // Swap the form out for the results.
         accessSection.classList.add('is-hidden');
         resultsSection.classList.remove('is-hidden');
+      }
+
+      // Auto-load when a ?token= is present in the URL (shareable gallery
+      // links), so the client doesn't have to type the code. Falls back to
+      // the form (and shows an error) if the token is missing/invalid.
+      var urlToken = new URLSearchParams(window.location.search).get('token');
+      if (urlToken) {
+        input.value = urlToken;
+        loadGallery(urlToken);
       }
     })();
   </script>
