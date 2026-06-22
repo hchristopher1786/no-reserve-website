@@ -105,15 +105,20 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
   WORKFLOW to (re)build a gallery's archive:
     1. `src/zip.js` is a local STORE-zip writer. Build `all.zip` from the
        full-res originals (entries named `<slug>/viper-NN.jpg`), STORE mode.
-    2. Upload to R2 at `galleries/<slug>/all.zip`. NOTE: `wrangler r2 object
-       put` caps at 315 MiB, so a ~1GB archive must go up another way
-       (R2 dashboard drag-drop, or an S3/multipart tool with an R2 API token).
+    2. Upload to R2 at `galleries/<slug>/all.zip`. NOTE: both `wrangler r2
+       object put` (~315 MiB) and the R2 dashboard (300 MB) cap single
+       uploads, so a ~1GB archive needs MULTIPART. There are no S3 tools on
+       this machine; we used a temporary secret-guarded Worker multipart
+       endpoint (`/api/_mpu`, since removed) driven by a local 50-MiB-part
+       script. For future big uploads, re-add that endpoint or set up an R2
+       S3 API token + multipart tool (aws-cli/rclone).
     3. Set `zipKey` in the gallery's KV entry.
-  The Viper gallery's `all.zip` (~919MB, 81 files) is built and KV `zipKey`
-  is set; the file still needs uploading to R2 (315 MiB wrangler cap).
+  DONE for the Viper gallery: `all.zip` (964,474,792 bytes, 81 files) is
+  uploaded to `galleries/2013-viper-gts/all.zip` and verified live end to
+  end (full `unzip -t` clean, Range/resume works). "Download all (ZIP)" at
+  `/client-galleries/` (code `viper-b8p2b7wd`) works.
   (`crcs`/`sizes` remain in the KV entry from the abandoned on-the-fly
-  approach; harmless, unused now.) The "Download all (ZIP)" button points
-  at the endpoint.
+  approach; harmless, unused now.)
 
 ## Still needed before a real launch
 
