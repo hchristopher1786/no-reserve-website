@@ -26,6 +26,13 @@ export default {
       return handleWebhook(request, env);
     }
 
+    // TEMPORARY: secret-guarded multipart upload, for pushing files larger
+    // than wrangler/dashboard's ~300MB single-PUT cap into R2. Remove once
+    // the upload is done. Gated by the UPLOAD_SECRET worker secret.
+    if (url.pathname === "/api/_mpu") {
+      return handleMpu(request, env);
+    }
+
     // Paid wallpaper download. The session_id Stripe puts on the
     // success_url is the proof of purchase — we verify it server-side.
     if (url.pathname === "/api/download" && request.method === "GET") {
@@ -517,6 +524,59 @@ async function handleGalleryZip(token, env, request) {
 
   headers.set("Content-Length", String(object.size));
   return new Response(object.body, { status: 200, headers });
+}
+
+// TEMPORARY multipart-upload handler (see route note). Lets a local script
+// push a large object into R2 in parts via the Worker's multipart binding,
+// bypassing the ~300MB single-PUT cap. Gated by the UPLOAD_SECRET secret.
+//   POST /api/_mpu?action=init&key=...                 -> { uploadId }
+//   PUT  /api/_mpu?action=part&key=...&uploadId=&part=N  (body = part bytes) -> { partNumber, etag }
+//   POST /api/_mpu?action=complete&key=...&uploadId=    (body = { parts }) -> { ok, size }
+//   POST /api/_mpu?action=abort&key=...&uploadId=
+async function handleMpu(request, env) {
+  if (!env.UPLOAD_SECRET) {
+    return new Response("Upload not configured", { status: 503 });
+  }
+  if (request.headers.get("x-upload-secret") !== env.UPLOAD_SECRET) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  const url = new URL(request.url);
+  const action = url.searchParams.get("action");
+  const key = url.searchParams.get("key");
+  if (!key) return new Response("Missing key", { status: 400 });
+
+  if (action === "init") {
+    const mpu = await env.PHOTOS_BUCKET.createMultipartUpload(key, {
+      httpMetadata: { contentType: "application/zip" },
+    });
+    return Response.json({ key: mpu.key, uploadId: mpu.uploadId });
+  }
+
+  const uploadId = url.searchParams.get("uploadId");
+  if (!uploadId) return new Response("Missing uploadId", { status: 400 });
+  const mpu = env.PHOTOS_BUCKET.resumeMultipartUpload(key, uploadId);
+
+  if (action === "part") {
+    const partNumber = Number(url.searchParams.get("part"));
+    if (!partNumber) return new Response("Missing part", { status: 400 });
+    const buf = await request.arrayBuffer(); // <=50MiB per part, safe in memory
+    const uploaded = await mpu.uploadPart(partNumber, buf);
+    return Response.json({ partNumber: uploaded.partNumber, etag: uploaded.etag });
+  }
+
+  if (action === "complete") {
+    const body = await request.json(); // { parts: [{ partNumber, etag }, ...] }
+    const obj = await mpu.complete(body.parts);
+    return Response.json({ ok: true, key: obj.key, size: obj.size });
+  }
+
+  if (action === "abort") {
+    await mpu.abort();
+    return Response.json({ ok: true });
+  }
+
+  return new Response("Bad action", { status: 400 });
 }
 
 // Lowercase, hyphenated slug for filenames (e.g. "2013 Viper GTS" ->
