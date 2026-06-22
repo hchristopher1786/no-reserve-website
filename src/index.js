@@ -492,41 +492,75 @@ async function handleGalleryZip(token, env) {
   // pull-based ReadableStream from it means the runtime only advances us when
   // the client is ready for more — so memory stays ~one file regardless of
   // total archive size (an eager writer buffers and trips the 128MB limit).
+  // Precomputed CRC-32 + size per entry (aligned with downloadKeys). When
+  // present we never CRC in the Worker — computing CRC over hundreds of MB
+  // of JS bytes blows the CPU limit. Instead we trust these and just pipe
+  // bytes (I/O, not CPU). They're produced once at upload time.
+  const crcs = Array.isArray(gallery.crcs) ? gallery.crcs : [];
+  const sizes = Array.isArray(gallery.sizes) ? gallery.sizes : [];
+
+  async function* pipeBody(object) {
+    const reader = object.body.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        yield value;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
   async function* zipChunks() {
     const central = [];
     let offset = 0;
-    for (const key of keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       const object = await env.PHOTOS_BUCKET.get(key);
       if (!object) continue; // skip anything missing rather than abort
       const date = object.uploaded ? new Date(object.uploaded) : new Date();
       // Entry name: put everything under a folder named for the client.
       const nameBytes = enc.encode(`${slug}/${key.split("/").pop()}`);
 
-      // Streaming entry: header first (crc/size unknown), then the object's
-      // bytes passed straight through while we CRC them, then a trailing data
-      // descriptor with the real crc/size. We never buffer the whole file.
-      const lh = buildLocalHeader({ nameBytes, date, streaming: true });
-      yield lh;
+      const havePrecomputed =
+        Number.isFinite(crcs[i]) && Number.isFinite(sizes[i]);
 
-      let crc = CRC_INIT;
-      let size = 0;
-      const reader = object.body.getReader();
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          crc = crc32Update(crc, value);
-          size += value.length;
-          yield value;
+      if (havePrecomputed) {
+        // Fast path: header carries the known crc/size, then we pipe the
+        // object straight through with no per-byte CPU work.
+        const crc = crcs[i] >>> 0;
+        const size = sizes[i];
+        const lh = buildLocalHeader({ nameBytes, crc, size, date });
+        yield lh;
+        yield* pipeBody(object);
+        central.push({ nameBytes, crc, size, offset, date });
+        offset += lh.length + size;
+      } else {
+        // Fallback (no precomputed CRC): compute it as the file streams and
+        // emit a trailing data descriptor. Fine for small galleries; large
+        // ones should precompute to stay under the CPU limit.
+        const lh = buildLocalHeader({ nameBytes, date, streaming: true });
+        yield lh;
+        let crc = CRC_INIT;
+        let size = 0;
+        const reader = object.body.getReader();
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            crc = crc32Update(crc, value);
+            size += value.length;
+            yield value;
+          }
+        } finally {
+          reader.releaseLock();
         }
-      } finally {
-        reader.releaseLock();
+        crc = crc32Final(crc);
+        yield buildDataDescriptor({ crc, size });
+        central.push({ nameBytes, crc, size, offset, date, streaming: true });
+        offset += lh.length + size + DATA_DESCRIPTOR_SIZE;
       }
-      crc = crc32Final(crc);
-
-      yield buildDataDescriptor({ crc, size });
-      central.push({ nameBytes, crc, size, offset, date, streaming: true });
-      offset += lh.length + size + DATA_DESCRIPTOR_SIZE;
     }
 
     let cdSize = 0;

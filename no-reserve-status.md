@@ -97,10 +97,17 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
   link.
 - **Whole-gallery ZIP.** `/api/gallery-zip/{token}` streams every full-res
   original as one STORE (uncompressed — JPEGs don't deflate) archive, built
-  on the fly via `src/zip.js`. Buffers one file at a time so memory stays
-  ~one file regardless of archive size; ZIP64 kicks in only past 4GB.
-  Designed for galleries up to a few GB; note it is NOT resumable (a dropped
-  connection restarts). The "Download all (ZIP)" button points at it.
+  on the fly via `src/zip.js`. The Worker pipes bytes only (no per-byte CPU)
+  and is NOT resumable (a dropped connection restarts).
+  IMPORTANT — CPU limit: computing CRC-32 in the Worker over hundreds of MB
+  trips the Workers CPU limit (`exceededCpu`, confirmed via `wrangler tail`).
+  So CRC-32 + size for each original are PRECOMPUTED at upload time and stored
+  in the gallery's KV entry as `crcs[]` / `sizes[]` (index-aligned with
+  `downloadKeys`); the zip handler trusts those and never CRCs at request
+  time. New galleries MUST populate `crcs`/`sizes` or large zips will fail.
+  (A per-file fallback that CRCs on the fly exists for galleries without
+  them — only safe for small galleries.) The "Download all (ZIP)" button
+  points at this endpoint.
 
 ## Still needed before a real launch
 
