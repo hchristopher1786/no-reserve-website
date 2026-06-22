@@ -95,19 +95,25 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
   token-gates against `downloadKeys` and serves the original as an
   attachment. The gallery page shows previews with a per-photo "↓ Full-res"
   link.
-- **Whole-gallery ZIP.** `/api/gallery-zip/{token}` streams every full-res
-  original as one STORE (uncompressed — JPEGs don't deflate) archive, built
-  on the fly via `src/zip.js`. The Worker pipes bytes only (no per-byte CPU)
-  and is NOT resumable (a dropped connection restarts).
-  IMPORTANT — CPU limit: computing CRC-32 in the Worker over hundreds of MB
-  trips the Workers CPU limit (`exceededCpu`, confirmed via `wrangler tail`).
-  So CRC-32 + size for each original are PRECOMPUTED at upload time and stored
-  in the gallery's KV entry as `crcs[]` / `sizes[]` (index-aligned with
-  `downloadKeys`); the zip handler trusts those and never CRCs at request
-  time. New galleries MUST populate `crcs`/`sizes` or large zips will fail.
-  (A per-file fallback that CRCs on the fly exists for galleries without
-  them — only safe for small galleries.) The "Download all (ZIP)" button
-  points at this endpoint.
+- **Whole-gallery ZIP — PRE-GENERATED, stored in R2.** Building the archive
+  on the fly in the Worker is NOT viable: every byte passes through JS and
+  trips the Workers CPU limit (`exceededCpu`, confirmed via `wrangler tail` —
+  happens even with zero CRC, just piping bytes). So we build `all.zip` once,
+  offline, and store it in R2; `/api/gallery-zip/{token}` just streams that
+  stored object natively (`Response(object.body)` — no per-byte JS) with
+  HTTP Range support so interrupted downloads resume. KV gains `zipKey`.
+  WORKFLOW to (re)build a gallery's archive:
+    1. `src/zip.js` is a local STORE-zip writer. Build `all.zip` from the
+       full-res originals (entries named `<slug>/viper-NN.jpg`), STORE mode.
+    2. Upload to R2 at `galleries/<slug>/all.zip`. NOTE: `wrangler r2 object
+       put` caps at 315 MiB, so a ~1GB archive must go up another way
+       (R2 dashboard drag-drop, or an S3/multipart tool with an R2 API token).
+    3. Set `zipKey` in the gallery's KV entry.
+  The Viper gallery's `all.zip` (~919MB, 81 files) is built and KV `zipKey`
+  is set; the file still needs uploading to R2 (315 MiB wrangler cap).
+  (`crcs`/`sizes` remain in the KV entry from the abandoned on-the-fly
+  approach; harmless, unused now.) The "Download all (ZIP)" button points
+  at the endpoint.
 
 ## Still needed before a real launch
 

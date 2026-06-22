@@ -13,16 +13,6 @@
 // real files in /public.
 
 import { getWallpaper } from "./catalog.js";
-import {
-  CRC_INIT,
-  crc32Update,
-  crc32Final,
-  buildLocalHeader,
-  buildDataDescriptor,
-  buildCentralHeader,
-  buildEnd,
-  DATA_DESCRIPTOR_SIZE,
-} from "./zip.js";
 
 export default {
   async fetch(request, env) {
@@ -75,7 +65,7 @@ export default {
     // original (downloadKeys) as a single STORE archive, built on the fly.
     const galZipMatch = url.pathname.match(/^\/api\/gallery-zip\/([^/]+)$/);
     if (galZipMatch && request.method === "GET") {
-      return handleGalleryZip(decodeURIComponent(galZipMatch[1]), env);
+      return handleGalleryZip(decodeURIComponent(galZipMatch[1]), env, request);
     }
 
     // Nothing matched above — let static assets handle it (this will
@@ -463,7 +453,7 @@ async function handleGalleryDownload(token, key, env) {
 // CRC, write its local header + bytes, then move on. Backpressure from
 // the response stream throttles us to the client's download speed.
 // ---------------------------------------------------------------------
-async function handleGalleryZip(token, env) {
+async function handleGalleryZip(token, env, request) {
   if (!env.GALLERIES) {
     return new Response("Galleries not configured", { status: 503 });
   }
@@ -480,121 +470,53 @@ async function handleGalleryZip(token, env) {
     return new Response("Not found", { status: 404 });
   }
 
-  const keys = Array.isArray(gallery.downloadKeys) ? gallery.downloadKeys : [];
-  if (keys.length === 0) {
-    return new Response("Nothing to download", { status: 404 });
+  // The archive is pre-built once and stored in R2 (building it on the fly
+  // in the Worker trips the CPU limit — every byte would pass through JS).
+  // We just stream the stored object, which Cloudflare serves natively.
+  const zipKey = gallery.zipKey;
+  if (!zipKey) {
+    return new Response("No archive available", { status: 404 });
   }
 
-  const enc = new TextEncoder();
   const slug = slugify(gallery.clientName || token);
 
-  // Async generator yields the archive byte-chunk by byte-chunk. Driving a
-  // pull-based ReadableStream from it means the runtime only advances us when
-  // the client is ready for more — so memory stays ~one file regardless of
-  // total archive size (an eager writer buffers and trips the 128MB limit).
-  // Precomputed CRC-32 + size per entry (aligned with downloadKeys). When
-  // present we never CRC in the Worker — computing CRC over hundreds of MB
-  // of JS bytes blows the CPU limit. Instead we trust these and just pipe
-  // bytes (I/O, not CPU). They're produced once at upload time.
-  const crcs = Array.isArray(gallery.crcs) ? gallery.crcs : [];
-  const sizes = Array.isArray(gallery.sizes) ? gallery.sizes : [];
-
-  async function* pipeBody(object) {
-    const reader = object.body.getReader();
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        yield value;
-      }
-    } finally {
-      reader.releaseLock();
+  // Honor Range so interrupted downloads of a large archive can resume.
+  const rangeHeader = request.headers.get("Range");
+  let object = null;
+  if (rangeHeader) {
+    const m = /^bytes=(\d+)-(\d*)$/.exec(rangeHeader.trim());
+    if (m) {
+      const offset = Number(m[1]);
+      const opts =
+        m[2] === "" ? { offset } : { offset, length: Number(m[2]) - offset + 1 };
+      object = await env.PHOTOS_BUCKET.get(zipKey, { range: opts });
     }
   }
-
-  async function* zipChunks() {
-    const central = [];
-    let offset = 0;
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const object = await env.PHOTOS_BUCKET.get(key);
-      if (!object) continue; // skip anything missing rather than abort
-      const date = object.uploaded ? new Date(object.uploaded) : new Date();
-      // Entry name: put everything under a folder named for the client.
-      const nameBytes = enc.encode(`${slug}/${key.split("/").pop()}`);
-
-      const havePrecomputed =
-        Number.isFinite(crcs[i]) && Number.isFinite(sizes[i]);
-
-      if (havePrecomputed) {
-        // Fast path: header carries the known crc/size, then we pipe the
-        // object straight through with no per-byte CPU work.
-        const crc = crcs[i] >>> 0;
-        const size = sizes[i];
-        const lh = buildLocalHeader({ nameBytes, crc, size, date });
-        yield lh;
-        yield* pipeBody(object);
-        central.push({ nameBytes, crc, size, offset, date });
-        offset += lh.length + size;
-      } else {
-        // Fallback (no precomputed CRC): compute it as the file streams and
-        // emit a trailing data descriptor. Fine for small galleries; large
-        // ones should precompute to stay under the CPU limit.
-        const lh = buildLocalHeader({ nameBytes, date, streaming: true });
-        yield lh;
-        let crc = CRC_INIT;
-        let size = 0;
-        const reader = object.body.getReader();
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            crc = crc32Update(crc, value);
-            size += value.length;
-            yield value;
-          }
-        } finally {
-          reader.releaseLock();
-        }
-        crc = crc32Final(crc);
-        yield buildDataDescriptor({ crc, size });
-        central.push({ nameBytes, crc, size, offset, date, streaming: true });
-        offset += lh.length + size + DATA_DESCRIPTOR_SIZE;
-      }
-    }
-
-    let cdSize = 0;
-    for (const e of central) {
-      const ch = buildCentralHeader(e);
-      yield ch;
-      cdSize += ch.length;
-    }
-    yield buildEnd({ count: central.length, cdSize, cdOffset: offset });
+  if (!object) {
+    object = await env.PHOTOS_BUCKET.get(zipKey);
+  }
+  if (!object) {
+    return new Response("Archive not available yet", { status: 404 });
   }
 
-  const iterator = zipChunks();
-  const stream = new ReadableStream({
-    async pull(controller) {
-      try {
-        const { value, done } = await iterator.next();
-        if (done) controller.close();
-        else controller.enqueue(value);
-      } catch (err) {
-        controller.error(err);
-      }
-    },
-    cancel() {
-      if (iterator.return) iterator.return();
-    },
-  });
+  const headers = new Headers();
+  headers.set("Content-Type", "application/zip");
+  headers.set("Content-Disposition", `attachment; filename="${slug}.zip"`);
+  headers.set("Accept-Ranges", "bytes");
+  headers.set("Cache-Control", "private, no-store");
+  headers.set("etag", object.httpEtag);
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${slug}.zip"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
+  if (object.range) {
+    const start = object.range.offset || 0;
+    const len =
+      object.range.length != null ? object.range.length : object.size - start;
+    headers.set("Content-Range", `bytes ${start}-${start + len - 1}/${object.size}`);
+    headers.set("Content-Length", String(len));
+    return new Response(object.body, { status: 206, headers });
+  }
+
+  headers.set("Content-Length", String(object.size));
+  return new Response(object.body, { status: 200, headers });
 }
 
 // Lowercase, hyphenated slug for filenames (e.g. "2013 Viper GTS" ->
