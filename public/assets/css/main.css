@@ -260,11 +260,13 @@ main { padding-top: var(--nav-height); }
   align-items: flex-start;
   justify-content: flex-start;
   text-align: left;
+  /* Trim ~12vh of dead pavement off the bottom of the frame. */
+  min-height: calc(88vh - var(--nav-height));
   /* Scrim fades from the top (where the text sits) to transparent. */
   background-image:
     linear-gradient(to bottom, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.25) 50%, transparent 100%),
     url("/assets/images/DSC_1616.jpg");
-  background-position: center bottom; /* keep the car low; sky/trees up top */
+  background-position: center 60%; /* nudge the car down for breathing room */
 }
 .hero--home .hero__content {
   padding: 2.5rem 3rem;
