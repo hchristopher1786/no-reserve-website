@@ -201,8 +201,13 @@ main { padding-top: var(--nav-height); }
   justify-content: center;
   text-align: center;
   min-height: calc(100vh - var(--nav-height));
-  /* placeholder gradient — replace with a full-bleed car photo */
-  background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+  /* Full-bleed hero photo with a dark overlay so the text stays legible. */
+  background-image:
+    linear-gradient(rgba(26, 26, 26, 0.55), rgba(26, 26, 26, 0.55)),
+    url("/assets/images/DSC_1616.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   overflow: hidden;
 }
 
