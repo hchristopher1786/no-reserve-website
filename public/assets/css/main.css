@@ -255,6 +255,24 @@ main { padding-top: var(--nav-height); }
   background: linear-gradient(135deg, #1a1a1a 0%, #2e2e2e 100%);
 }
 
+/* Homepage hero: overlay text anchored top-left, car held low in frame */
+.hero--home {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  /* Scrim fades from the top (where the text sits) to transparent. */
+  background-image:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.25) 50%, transparent 100%),
+    url("/assets/images/DSC_1616.jpg");
+  background-position: center bottom; /* keep the car low; sky/trees up top */
+}
+.hero--home .hero__content {
+  padding: 2.5rem 3rem;
+}
+.hero--home .hero__ctas {
+  justify-content: flex-start;
+}
+
 /* ---------------------------------------------------------------------
    6. Generic section rhythm
    --------------------------------------------------------------------- */
