@@ -43,9 +43,11 @@ play later, if you want local development.
 1. **Create the R2 bucket.** Storage & Databases > R2 Object Storage >
    Create bucket. Name it `no-reserve-photos` (or update the name in
    wrangler.jsonc to match).
-2. **Create a KV namespace** for gallery tokens. Storage & Databases >
-   KV > Create namespace. Copy its ID into wrangler.jsonc where it
-   says REPLACE_WITH_YOUR_KV_NAMESPACE_ID.
+2. **KV namespace** for gallery tokens — already created and bound. The
+   `GALLERIES` namespace (id `8d54027017b04c1e81d851f7992e266c`) is set in
+   wrangler.jsonc. To recreate from scratch: Storage & Databases > KV >
+   Create namespace, then put its ID in wrangler.jsonc under
+   `kv_namespaces`.
 3. **Bind both to the Worker**, if they aren't picked up automatically
    from wrangler.jsonc: Settings > Bindings > Add.
 4. **Add environment variables**: Settings > Variables and Secrets >
