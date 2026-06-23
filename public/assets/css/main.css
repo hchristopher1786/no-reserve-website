@@ -351,6 +351,13 @@ main { padding-top: var(--nav-height); }
   align-items: center;
 }
 .about__media .placeholder-box { height: 420px; }
+.about__img {
+  display: block;
+  width: 100%;
+  height: 420px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
 
 /* ---------------------------------------------------------------------
    9. Wallpaper storefront grid
