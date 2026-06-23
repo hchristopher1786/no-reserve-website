@@ -138,7 +138,7 @@ p { margin: 0 0 var(--space-sm); }
 }
 
 .site-header__logo img {
-  max-height: 56px;
+  max-height: 60px;
   width: auto;
 }
 
