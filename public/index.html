@@ -60,39 +60,7 @@
         <div class="carousel" id="work-carousel">
           <div class="carousel__viewport">
             <div class="carousel__track" id="carousel-track">
-              <!-- 8 placeholder slides -->
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 1 of 8</div>
-                <p class="carousel__caption"><!-- caption slot --></p>
-              </div>
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 2 of 8</div>
-                <p class="carousel__caption"></p>
-              </div>
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 3 of 8</div>
-                <p class="carousel__caption"></p>
-              </div>
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 4 of 8</div>
-                <p class="carousel__caption"></p>
-              </div>
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 5 of 8</div>
-                <p class="carousel__caption"></p>
-              </div>
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 6 of 8</div>
-                <p class="carousel__caption"></p>
-              </div>
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 7 of 8</div>
-                <p class="carousel__caption"></p>
-              </div>
-              <div class="carousel__slide">
-                <div class="placeholder-box">Photo 8 of 8</div>
-                <p class="carousel__caption"></p>
-              </div>
+              <!-- Slides are injected from /api/carousel on page load. -->
             </div>
           </div>
 
@@ -142,7 +110,7 @@
 
   <script src="/assets/js/main.js"></script>
 
-  <!-- ===== Carousel logic (manual only, no autoplay) ===== -->
+  <!-- ===== Carousel: load slides from /api/carousel, then manual paging (no autoplay) ===== -->
   <script>
     (function () {
       var track = document.getElementById('carousel-track');
@@ -150,36 +118,84 @@
       var next = document.getElementById('carousel-next');
       if (!track || !prev || !next) return;
 
-      var slides = track.children.length;
+      // Build one slide from a carousel photo entry. The stored key may be a
+      // full R2 key like "carousel/carousel-0.jpg"; the image is served via
+      // /api/carousel-photo/{filename}, so strip everything up to the last
+      // slash to get just the filename portion.
+      function buildSlide(photo) {
+        var key = typeof photo === 'string' ? photo : ((photo && photo.key) || '');
+        var filename = key.split('/').pop();
+        var caption = (photo && typeof photo === 'object' && photo.caption) ? photo.caption : '';
 
-      // How many slides are visible depends on the breakpoint (CSS: 1 on
-      // mobile, 3 from 768px up). Read it back so paging math matches.
-      function perView() {
-        return window.matchMedia('(min-width: 768px)').matches ? 3 : 1;
+        var slide = document.createElement('div');
+        slide.className = 'carousel__slide';
+
+        var img = document.createElement('img');
+        img.src = '/api/carousel-photo/' + filename;
+        img.alt = caption || 'No Reserve Photography work sample';
+        img.loading = 'lazy';
+        // Match the sizing the old .placeholder-box gave each slide.
+        img.style.width = '100%';
+        img.style.height = '400px';
+        img.style.objectFit = 'cover';
+        img.style.display = 'block';
+        slide.appendChild(img);
+
+        var cap = document.createElement('p');
+        cap.className = 'carousel__caption';
+        cap.textContent = caption;
+        slide.appendChild(cap);
+
+        return slide;
       }
 
-      var index = 0; // index of the left-most visible slide
+      // Manual paging (unchanged behavior) — wired up once slides exist, since
+      // the paging math reads the slide count.
+      function initPaging() {
+        var slides = track.children.length;
 
-      function maxIndex() {
-        return Math.max(0, slides - perView());
+        // How many slides are visible depends on the breakpoint (CSS: 1 on
+        // mobile, 3 from 768px up). Read it back so paging math matches.
+        function perView() {
+          return window.matchMedia('(min-width: 768px)').matches ? 3 : 1;
+        }
+
+        var index = 0; // index of the left-most visible slide
+
+        function maxIndex() {
+          return Math.max(0, slides - perView());
+        }
+
+        function render() {
+          index = Math.min(index, maxIndex());
+          // Each step shifts by one slide width plus the flex gap.
+          var slideEl = track.children[0];
+          if (!slideEl) return;
+          var gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap || 0) || 0;
+          var step = slideEl.getBoundingClientRect().width + gap;
+          track.style.transform = 'translateX(' + (-index * step) + 'px)';
+          prev.disabled = index <= 0;
+          next.disabled = index >= maxIndex();
+        }
+
+        prev.addEventListener('click', function () { index = Math.max(0, index - perView()); render(); });
+        next.addEventListener('click', function () { index = Math.min(maxIndex(), index + perView()); render(); });
+        window.addEventListener('resize', render);
+
+        render();
       }
 
-      function render() {
-        index = Math.min(index, maxIndex());
-        // Each step shifts by one slide width plus the flex gap.
-        var slideEl = track.children[0];
-        var gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap || 0) || 0;
-        var step = slideEl.getBoundingClientRect().width + gap;
-        track.style.transform = 'translateX(' + (-index * step) + 'px)';
-        prev.disabled = index <= 0;
-        next.disabled = index >= maxIndex();
-      }
-
-      prev.addEventListener('click', function () { index = Math.max(0, index - perView()); render(); });
-      next.addEventListener('click', function () { index = Math.min(maxIndex(), index + perView()); render(); });
-      window.addEventListener('resize', render);
-
-      render();
+      // Fetch the carousel config, inject a slide per photo, then start paging.
+      // The first slide is visible immediately (index 0, no autoplay).
+      fetch('/api/carousel')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var photos = (data && Array.isArray(data.photos)) ? data.photos : [];
+          track.innerHTML = '';
+          photos.forEach(function (photo) { track.appendChild(buildSlide(photo)); });
+        })
+        .catch(function () { /* on failure, leave the track empty */ })
+        .then(function () { initPaging(); });
     })();
   </script>
 
