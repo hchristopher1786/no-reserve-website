@@ -1,15 +1,25 @@
 {
-  "name": "no-reserve-photography",
-  "compatibility_date": "2026-06-01",
-  "main": "./src/index.js",
-  "assets": {
-    "directory": "./public",
-    "binding": "ASSETS"
-  },
-  "r2_buckets": [
-    { "binding": "PHOTOS_BUCKET", "bucket_name": "no-reserve-photos" }
-  ],
-  "kv_namespaces": [
-    { "binding": "GALLERIES", "id": "8d54027017b04c1e81d851f7992e266c" }
-  ],
+	"name": "no-reserve-photography",
+	"compatibility_date": "2026-06-01",
+	"main": "./src/index.js",
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	},
+	"r2_buckets": [
+		{
+			"binding": "PHOTOS_BUCKET",
+			"bucket_name": "no-reserve-photos"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "GALLERIES",
+			"id": "8d54027017b04c1e81d851f7992e266c"
+		},
+		{
+			"binding": "CAROUSEL",
+			"id": "8a54b8f679674c839567c5284ed9ec9f"
+		}
+	],
 }

@@ -37,6 +37,11 @@ export default {
       return handleGalleryLookup(galleryMatch[1], env);
     }
 
+    // Homepage carousel config, read from the CAROUSEL KV namespace.
+    if (url.pathname === "/api/carousel" && request.method === "GET") {
+      return handleCarousel(env);
+    }
+
     // Private client-gallery image: /api/photo/{token}/{photoKey}.
     // The trailing (.+) lets photoKeys contain slashes. We verify the key
     // belongs to that gallery token before streaming anything from R2.
@@ -517,6 +522,30 @@ async function handleGalleryZip(token, env, request) {
 
   headers.set("Content-Length", String(object.size));
   return new Response(object.body, { status: 200, headers });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/carousel — returns the homepage carousel config stored in the
+// CAROUSEL KV namespace under the key "carousel". The stored value is
+// raw JSON we pass straight through. When the key hasn't been written
+// yet, we return an empty-but-valid shape ({"photos":[],"refreshed":null})
+// so the homepage JS always has something well-formed to render. A short
+// public cache (5 min) keeps this cheap without making edits slow to show.
+// ---------------------------------------------------------------------
+async function handleCarousel(env) {
+  if (!env.CAROUSEL) {
+    return new Response("Carousel not configured", { status: 503 });
+  }
+
+  const raw = await env.CAROUSEL.get("carousel");
+  const body = raw ?? JSON.stringify({ photos: [], refreshed: null });
+
+  return new Response(body, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=300",
+    },
+  });
 }
 
 // Lowercase, hyphenated slug for filenames (e.g. "2013 Viper GTS" ->
