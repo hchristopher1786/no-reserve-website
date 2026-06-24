@@ -42,6 +42,13 @@ export default {
       return handleCarousel(env);
     }
 
+    // Public carousel image: /api/carousel-photo/{key}. Streams
+    // carousel/{key} straight from R2 (these are intentionally public).
+    const carouselPhotoMatch = url.pathname.match(/^\/api\/carousel-photo\/([^/]+)$/);
+    if (carouselPhotoMatch && request.method === "GET") {
+      return handleCarouselPhoto(decodeURIComponent(carouselPhotoMatch[1]), env);
+    }
+
     // Private client-gallery image: /api/photo/{token}/{photoKey}.
     // The trailing (.+) lets photoKeys contain slashes. We verify the key
     // belongs to that gallery token before streaming anything from R2.
@@ -544,6 +551,28 @@ async function handleCarousel(env) {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "public, max-age=300",
+    },
+  });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/carousel-photo/{key} — serves a homepage carousel image
+// straight from R2. Unlike the client-gallery photos these are public,
+// so there's no token gating: we just fetch carousel/{key} from the
+// bucket and stream it back, or 404 if it isn't there. A one-day public
+// cache keeps repeat homepage loads cheap.
+// ---------------------------------------------------------------------
+async function handleCarouselPhoto(key, env) {
+  const object = await env.PHOTOS_BUCKET.get(`carousel/${key}`);
+  if (!object) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  return new Response(object.body, {
+    headers: {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=86400",
+      etag: object.httpEtag,
     },
   });
 }
