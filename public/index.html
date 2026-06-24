@@ -51,23 +51,117 @@
       </div>
     </section>
 
-    <!-- ===== Photo carousel: "The Work" ===== -->
-    <!-- Real images replace the .placeholder-box divs with <img> tags later. -->
+    <!-- ===== Photo carousel: "The Work" (stacked card peek) ===== -->
     <section class="section">
       <div class="container">
         <h2 class="section__heading">The Work</h2>
 
-        <div class="carousel" id="work-carousel">
-          <div class="carousel__viewport">
-            <div class="carousel__track" id="carousel-track">
+        <!-- Scoped carousel styles. Kept here, not in main.css, so this
+             change stays inside the carousel section. Colours/spacing all
+             reference the shared design tokens. -->
+        <style>
+          .peek-carousel { position: relative; }
+
+          .peek-carousel__stage {
+            position: relative;
+            overflow: hidden; /* clips the off-stage parts of the peek cards */
+          }
+
+          .peek-carousel__track {
+            display: flex;
+            height: 800px;          /* center card height */
+            transition: transform 0.4s ease;
+            will-change: transform;
+          }
+
+          .peek-carousel__slide {
+            flex: 0 0 calc(100% - 150px); /* leaves 75px peek on each side */
+            height: 100%;
+            background: #111;
+            border: 1px solid var(--border);
+            opacity: 0.4;                 /* peek cards dimmed... */
+            transform: scale(0.95);       /* ...and slightly recessed */
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            overflow: hidden;
+          }
+          .peek-carousel__slide.is-active {
+            opacity: 1;
+            transform: scale(1);
+          }
+          .peek-carousel__slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;          /* uncropped, floats at native ratio */
+            background: #111;
+          }
+
+          /* Arrows overlaid on the peek areas. */
+          .peek-carousel__arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 64px;
+            font-size: 1.3rem;
+            color: var(--text);
+            background: rgba(26, 26, 26, 0.7); /* --bg at 70% */
+            border: 1px solid var(--border);
+            cursor: pointer;
+            z-index: 2;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+          }
+          .peek-carousel__arrow:hover {
+            background: var(--surface);
+            border-color: var(--accent);
+          }
+          .peek-carousel__arrow--prev { left: 8px; }
+          .peek-carousel__arrow--next { right: 8px; }
+
+          /* Dot indicators (square, to match the site's sharp edges). */
+          .peek-carousel__dots {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-xs);
+            margin-top: var(--space-md);
+          }
+          .peek-carousel__dot {
+            width: 9px;
+            height: 9px;
+            padding: 0;
+            background: transparent;
+            border: 1px solid var(--accent);
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+          }
+          .peek-carousel__dot:hover { background: var(--text-muted); }
+          .peek-carousel__dot.is-active {
+            background: var(--text);
+            border-color: var(--text);
+          }
+
+          @media (max-width: 768px) {
+            .peek-carousel__track { height: 60vh; }
+            .peek-carousel__slide { flex-basis: calc(100% - 80px); } /* 40px peek */
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .peek-carousel__track,
+            .peek-carousel__slide { transition: none; }
+          }
+        </style>
+
+        <div class="peek-carousel" id="work-carousel">
+          <div class="peek-carousel__stage">
+            <div class="peek-carousel__track" id="carousel-track">
               <!-- Slides are injected from /api/carousel on page load. -->
             </div>
+            <button class="peek-carousel__arrow peek-carousel__arrow--prev" id="carousel-prev" aria-label="Previous photo">&larr;</button>
+            <button class="peek-carousel__arrow peek-carousel__arrow--next" id="carousel-next" aria-label="Next photo">&rarr;</button>
           </div>
-
-          <div class="carousel__controls">
-            <button class="carousel__btn" id="carousel-prev" aria-label="Previous photos">&larr;</button>
-            <button class="carousel__btn" id="carousel-next" aria-label="Next photos">&rarr;</button>
-          </div>
+          <div class="peek-carousel__dots" id="carousel-dots" aria-label="Carousel position"></div>
         </div>
       </div>
     </section>
@@ -110,13 +204,20 @@
 
   <script src="/assets/js/main.js"></script>
 
-  <!-- ===== Carousel: load slides from /api/carousel, then manual paging (no autoplay) ===== -->
+  <!-- ===== Carousel: stacked card peek, auto-advancing ===== -->
   <script>
     (function () {
+      var root = document.getElementById('work-carousel');
       var track = document.getElementById('carousel-track');
       var prev = document.getElementById('carousel-prev');
       var next = document.getElementById('carousel-next');
-      if (!track || !prev || !next) return;
+      var dotsWrap = document.getElementById('carousel-dots');
+      if (!root || !track || !prev || !next) return;
+
+      var AUTO_MS = 5000;
+      var index = 0;
+      var count = 0;
+      var timer = null;
 
       // Build one slide from a carousel photo entry. The stored key may be a
       // full R2 key like "carousel/carousel-0.jpg"; the image is served via
@@ -128,74 +229,93 @@
         var caption = (photo && typeof photo === 'object' && photo.caption) ? photo.caption : '';
 
         var slide = document.createElement('div');
-        slide.className = 'carousel__slide';
+        slide.className = 'peek-carousel__slide';
 
         var img = document.createElement('img');
         img.src = '/api/carousel-photo/' + filename;
         img.alt = caption || 'No Reserve Photography work sample';
         img.loading = 'lazy';
-        // Match the sizing the old .placeholder-box gave each slide.
-        img.style.width = '100%';
-        img.style.height = '400px';
-        img.style.objectFit = 'cover';
-        img.style.display = 'block';
         slide.appendChild(img);
-
-        var cap = document.createElement('p');
-        cap.className = 'carousel__caption';
-        cap.textContent = caption;
-        slide.appendChild(cap);
 
         return slide;
       }
 
-      // Manual paging (unchanged behavior) — wired up once slides exist, since
-      // the paging math reads the slide count.
-      function initPaging() {
-        var slides = track.children.length;
-
-        // How many slides are visible depends on the breakpoint (CSS: 1 on
-        // mobile, 3 from 768px up). Read it back so paging math matches.
-        function perView() {
-          return window.matchMedia('(min-width: 768px)').matches ? 3 : 1;
+      function buildDots() {
+        if (!dotsWrap) return;
+        dotsWrap.innerHTML = '';
+        for (var i = 0; i < count; i++) {
+          var dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = 'peek-carousel__dot';
+          dot.setAttribute('aria-label', 'Go to photo ' + (i + 1));
+          (function (n) {
+            dot.addEventListener('click', function () { goTo(n); restart(); });
+          })(i);
+          dotsWrap.appendChild(dot);
         }
+      }
 
-        var index = 0; // index of the left-most visible slide
+      // Position the track so the active slide sits centered, leaving an
+      // equal peek of each neighbour. The peek width is derived from the
+      // actual layout (so it follows the CSS calc()/breakpoints), and
+      // offsetWidth is used because it ignores the slides' scale transform.
+      function render() {
+        var slides = track.children;
+        if (!slides.length) return;
+        var slideWidth = slides[0].offsetWidth;
+        var stageWidth = track.parentElement.clientWidth;
+        var peek = (stageWidth - slideWidth) / 2;
+        track.style.transform = 'translateX(' + (peek - index * slideWidth) + 'px)';
 
-        function maxIndex() {
-          return Math.max(0, slides - perView());
+        for (var i = 0; i < slides.length; i++) {
+          slides[i].classList.toggle('is-active', i === index);
         }
-
-        function render() {
-          index = Math.min(index, maxIndex());
-          // Each step shifts by one slide width plus the flex gap.
-          var slideEl = track.children[0];
-          if (!slideEl) return;
-          var gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap || 0) || 0;
-          var step = slideEl.getBoundingClientRect().width + gap;
-          track.style.transform = 'translateX(' + (-index * step) + 'px)';
-          prev.disabled = index <= 0;
-          next.disabled = index >= maxIndex();
+        if (dotsWrap) {
+          var dots = dotsWrap.children;
+          for (var j = 0; j < dots.length; j++) {
+            dots[j].classList.toggle('is-active', j === index);
+          }
         }
+      }
 
-        prev.addEventListener('click', function () { index = Math.max(0, index - perView()); render(); });
-        next.addEventListener('click', function () { index = Math.min(maxIndex(), index + perView()); render(); });
-        window.addEventListener('resize', render);
-
+      function goTo(i) {
+        if (count === 0) return;
+        index = ((i % count) + count) % count; // wraps both directions
         render();
       }
 
-      // Fetch the carousel config, inject a slide per photo, then start paging.
-      // The first slide is visible immediately (index 0, no autoplay).
+      function start() {
+        stop();
+        if (count > 1) timer = setInterval(function () { goTo(index + 1); }, AUTO_MS);
+      }
+      function stop() {
+        if (timer) { clearInterval(timer); timer = null; }
+      }
+      function restart() { start(); } // reset the timer after a manual move
+
+      prev.addEventListener('click', function () { goTo(index - 1); restart(); });
+      next.addEventListener('click', function () { goTo(index + 1); restart(); });
+      window.addEventListener('resize', render);
+
+      // Pause auto-advance while the pointer is over the carousel.
+      root.addEventListener('mouseenter', stop);
+      root.addEventListener('mouseleave', start);
+
+      // Fetch the carousel config, inject a slide per photo, build the dots,
+      // show the first slide, then start auto-advancing.
       fetch('/api/carousel')
         .then(function (res) { return res.json(); })
         .then(function (data) {
           var photos = (data && Array.isArray(data.photos)) ? data.photos : [];
           track.innerHTML = '';
           photos.forEach(function (photo) { track.appendChild(buildSlide(photo)); });
+          count = photos.length;
+          index = 0;
+          buildDots();
+          render();
+          start();
         })
-        .catch(function () { /* on failure, leave the track empty */ })
-        .then(function () { initPaging(); });
+        .catch(function () { /* on failure, leave the carousel empty */ });
     })();
   </script>
 
