@@ -69,7 +69,7 @@
 
           .peek-carousel__track {
             display: flex;
-            height: 800px;          /* center card height */
+            height: 500px;          /* base (768–1024px); scales by breakpoint below */
             transition: transform 0.4s ease;
             will-change: transform;
           }
@@ -77,22 +77,23 @@
           .peek-carousel__slide {
             flex: 0 0 calc(100% - 150px); /* leaves 75px peek on each side */
             height: 100%;
-            background: #111;
-            border: 1px solid var(--border);
+            background: transparent;      /* no frame — image floats on the page bg */
             opacity: 0.4;                 /* peek cards dimmed... */
             transform: scale(0.95);       /* ...and slightly recessed */
-            transition: opacity 0.4s ease, transform 0.4s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); /* lighter — peeks sit back */
+            transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
             overflow: hidden;
           }
           .peek-carousel__slide.is-active {
             opacity: 1;
             transform: scale(1);
+            /* Strong, layered drop shadow so the active card lifts off the page. */
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
           }
           .peek-carousel__slide img {
             width: 100%;
             height: 100%;
             object-fit: contain;          /* uncropped, floats at native ratio */
-            background: #111;
           }
 
           /* Arrows overlaid on the peek areas. */
@@ -142,7 +143,13 @@
             border-color: var(--text);
           }
 
-          @media (max-width: 768px) {
+          /* Center-card height scales up with the viewport. Base above
+             (500px) covers 768–1024px; these override upward and down. */
+          @media (min-width: 1024px) { .peek-carousel__track { height: 650px; } }
+          @media (min-width: 1440px) { .peek-carousel__track { height: 800px; } }
+          @media (min-width: 2561px) { .peek-carousel__track { height: 1000px; } } /* 4K+ */
+
+          @media (max-width: 767.98px) {
             .peek-carousel__track { height: 60vh; }
             .peek-carousel__slide { flex-basis: calc(100% - 80px); } /* 40px peek */
           }
