@@ -89,13 +89,14 @@
             /* Strong, layered drop shadow so the active card lifts off the page. */
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
           }
-          /* The image drives the card size: a fixed (normalized) height with
-             width:auto renders at the photo's natural aspect ratio, so the
-             card wraps it tightly with no letterbox gaps above/below. */
+          /* The image scales proportionally inside a max-height × max-width
+             box (both axes capped, aspect ratio preserved), so it never
+             distorts and the card shrink-wraps the rendered photo on all sides. */
           .peek-carousel__slide img {
-            height: 500px;        /* base (768–1024px); scales by breakpoint below */
-            width: auto;
+            max-height: 500px;    /* base (768–1024px); scales by breakpoint below */
             max-width: 100%;
+            width: auto;
+            height: auto;
             display: block;
             margin: 0 auto;
           }
@@ -147,15 +148,15 @@
             border-color: var(--text);
           }
 
-          /* Normalized image height scales up with the viewport; the card
-             wraps it. Base above (500px) covers 768–1024px; these override
-             upward and down. */
-          @media (min-width: 1024px) { .peek-carousel__slide img { height: 650px; } }
-          @media (min-width: 1440px) { .peek-carousel__slide img { height: 800px; } }
-          @media (min-width: 2561px) { .peek-carousel__slide img { height: 1000px; } } /* 4K+ */
+          /* Max image height scales up with the viewport; the card wraps the
+             rendered photo. Base above (500px) covers 768–1024px; these
+             override upward and down. */
+          @media (min-width: 1024px) { .peek-carousel__slide img { max-height: 650px; } }
+          @media (min-width: 1440px) { .peek-carousel__slide img { max-height: 800px; } }
+          @media (min-width: 2561px) { .peek-carousel__slide img { max-height: 1000px; } } /* 4K+ */
 
           @media (max-width: 767.98px) {
-            .peek-carousel__slide img { height: 60vh; }
+            .peek-carousel__slide img { max-height: 60vh; }
             .peek-carousel__slide { flex-basis: calc(100% - 80px); } /* 40px peek */
           }
 
