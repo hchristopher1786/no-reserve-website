@@ -80,6 +80,15 @@ export default {
       return handleGalleryZip(decodeURIComponent(galZipMatch[1]), env, request);
     }
 
+    // Public auction-portfolio image: /api/portfolio-photo/{key}. The
+    // trailing (.+) lets keys contain slashes (they're under bat-portfolio/).
+    // These are intentionally public, so there's no token gating — the
+    // handler just constrains keys to the bat-portfolio/ prefix.
+    const portfolioPhotoMatch = url.pathname.match(/^\/api\/portfolio-photo\/(.+)$/);
+    if (portfolioPhotoMatch && request.method === "GET") {
+      return handlePortfolioPhoto(decodeURIComponent(portfolioPhotoMatch[1]), env);
+    }
+
     // Nothing matched above — let static assets handle it (this will
     // 404 naturally if it's not a real file either).
     return env.ASSETS.fetch(request);
@@ -575,6 +584,28 @@ async function handleCarouselPhoto(key, env) {
       etag: object.httpEtag,
     },
   });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/portfolio-photo/{key} — serves a public auction-portfolio
+// image straight from R2. Like the carousel images these are public, so
+// there's no token gating. We only constrain keys to the bat-portfolio/
+// prefix so this route can't be used to pull gallery or wallpaper files
+// out of the same bucket. Cached aggressively (immutable, 1 year) since
+// these object keys never change once published.
+// ---------------------------------------------------------------------
+async function handlePortfolioPhoto(r2Key, env) {
+  if (!r2Key.startsWith("bat-portfolio/")) {
+    return new Response("Not found", { status: 404 });
+  }
+  const object = await env.PHOTOS_BUCKET.get(r2Key);
+  if (!object) {
+    return new Response("Not found", { status: 404 });
+  }
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  return new Response(object.body, { headers });
 }
 
 // Lowercase, hyphenated slug for filenames (e.g. "2013 Viper GTS" ->
