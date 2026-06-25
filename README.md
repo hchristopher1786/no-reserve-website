@@ -1,64 +1,78 @@
-# No Reserve Photography — site scaffold
+# No Reserve Photography
 
-Skeleton, not the finished site — minimal logic everywhere so the
-plumbing can be confirmed before any real design or content goes in.
+Website for **No Reserve Photography, LLC** — auction-car photography in
+Houston, TX. Live at https://noreservephotography.com.
 
-This uses Cloudflare's current model: one Worker script (`src/index.js`)
-handles all server logic, and static files live in `public/`. (Older
-guides describe a separate "Pages" product with a `functions/` folder —
-Cloudflare has been folding that into this unified Workers approach,
-which is why the dashboard now says "Create a Worker" even for a
-mostly-static site like this one.)
+A mostly-static site fronted by a single Cloudflare Worker. This uses
+Cloudflare's current model: one Worker script (`src/index.js`) handles all
+server logic, and static files live in `public/`. (Older guides describe a
+separate "Pages" product with a `functions/` folder — Cloudflare folded that
+into the unified Workers approach, which is why the dashboard says "Create a
+Worker" even for a mostly-static site like this.)
+
+> Working in this repo with Claude? See **CLAUDE.md** for architecture,
+> conventions, and gotchas.
 
 ## Structure
 
 ```
-public/index.html              homepage
-public/wallpapers/index.html   public, free-to-browse gallery + buy button
-public/gallery/index.html      client gallery viewer (reads ?token=...)
-src/index.js                   the one Worker script — routes /api/* requests,
-                                falls through to static assets for everything else
-wrangler.jsonc                 ties together the assets folder, the script, and bindings
-package.json                   so the deploy step has wrangler available
+public/index.html                  homepage (hero + carousel)
+public/wallpapers/index.html       paid wallpaper storefront (Stripe)
+public/bat-portfolio/index.html    auction portfolio (data-driven from listings.json)
+public/client-galleries/index.html token-gated client gallery viewer
+public/download-success/index.html post-purchase download page
+public/assets/css/main.css         shared design system (dark charcoal)
+public/assets/js/main.js           shared nav behavior
+src/index.js                       the one Worker script — routes /api/*, else static
+src/catalog.js                     server-side wallpaper catalog (price + R2 key)
+src/zip.js                         local STORE-zip writer for gallery archives
+wrangler.jsonc                     assets dir, Worker entry, and bindings
 ```
 
-## Step 0 — get this into a GitHub repo
+## How it works
 
-1. Go to github.com/new (logged in as hchristopher1786).
-2. Name it something like `no-reserve-website`. Public or private both
-   work — Cloudflare just needs read access via the GitHub connection.
-   Skip adding a README; an empty repo is easiest to upload into.
-3. Create the repo. On its page, click "uploading an existing file."
-4. Drag the whole unzipped `no-reserve-site` folder into the upload
-   box (modern GitHub keeps the subfolder structure when you drag a
-   folder, not just individual files). Commit to main.
-5. Back in the Cloudflare wizard, search for the repo name and select
-   it, then continue through "Create and deploy."
+- **Static-first routing.** Requests are matched against `public/` before the
+  Worker runs; only unmatched paths (the `/api/*` routes) reach `src/index.js`.
+- **Stripe wallpaper sales.** `/api/checkout` creates a Checkout Session with
+  price/name looked up server-side from `src/catalog.js` (never trusted from
+  the browser). `/api/webhook` verifies Stripe's signature (HMAC-SHA256 +
+  replay protection, fails closed). `/api/download` confirms the session is
+  paid, then streams the original from R2.
+- **Client galleries.** Token-gated: `/api/gallery/{token}` returns a
+  gallery's photo list from KV; `/api/photo`, `/api/gallery-download`, and
+  `/api/gallery-zip` serve previews, full-res originals, and a prebuilt ZIP
+  from R2, all verified against the gallery token.
+- **Homepage carousel.** `/api/carousel` (config from KV) and
+  `/api/carousel-photo/{key}` (image from R2), both public.
+- **Auction portfolio.** Fully static — `public/bat-portfolio/index.html`
+  reads `listings.json` and serves thumbnails from
+  `public/bat-portfolio/Images/`. No Worker route involved. See CLAUDE.md for
+  the add-a-listing workflow.
 
-No command line needed for this part — git/Wrangler only come into
-play later, if you want local development.
+## Bindings (wrangler.jsonc)
 
-## What needs to happen in the Cloudflare dashboard
+- `PHOTOS_BUCKET` — R2 bucket `no-reserve-photos`
+- `GALLERIES` — KV namespace for client-gallery tokens
+- `CAROUSEL` — KV namespace for the homepage carousel config
+- `ASSETS` — the `public/` static-assets binding
 
-1. **Create the R2 bucket.** Storage & Databases > R2 Object Storage >
-   Create bucket. Name it `no-reserve-photos` (or update the name in
-   wrangler.jsonc to match).
-2. **KV namespace** for gallery tokens — already created and bound. The
-   `GALLERIES` namespace (id `8d54027017b04c1e81d851f7992e266c`) is set in
-   wrangler.jsonc. To recreate from scratch: Storage & Databases > KV >
-   Create namespace, then put its ID in wrangler.jsonc under
-   `kv_namespaces`.
-3. **Bind both to the Worker**, if they aren't picked up automatically
-   from wrangler.jsonc: Settings > Bindings > Add.
-4. **Add environment variables**: Settings > Variables and Secrets >
-   STRIPE_SECRET_KEY, and later STRIPE_WEBHOOK_SECRET.
-5. **Set up the Stripe webhook**: Stripe dashboard > Developers >
-   Webhooks > Add endpoint > `https://noreservephotography.com/api/webhook`,
-   listening for `checkout.session.completed`.
+## Deploy
 
-## What's still a stub, on purpose
+Push to `main` and Cloudflare auto-deploys from the GitHub connection (expect
+~1 minute of lag). `npm run deploy` (`wrangler deploy`) is the manual
+alternative.
 
-- Webhook signature verification in `src/index.js` is flagged clearly
-  and needs real implementation before any payment goes through it.
-- Nothing renders actual photos yet.
-- No design pass has happened.
+## Required configuration (Cloudflare dashboard)
+
+- **R2 bucket** `no-reserve-photos` (Storage & Databases > R2), bound as
+  `PHOTOS_BUCKET`.
+- **KV namespaces** `GALLERIES` and `CAROUSEL`, bound per `wrangler.jsonc`.
+- **Secrets** (Settings > Variables and Secrets): `STRIPE_SECRET_KEY` and
+  `STRIPE_WEBHOOK_SECRET`.
+- **Stripe webhook** (Stripe > Developers > Webhooks): endpoint
+  `https://noreservephotography.com/api/webhook`, event
+  `checkout.session.completed`.
+
+## Before taking real payments
+
+- Switch Stripe from test mode to live keys (and the live webhook secret).
