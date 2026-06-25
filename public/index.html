@@ -37,6 +37,47 @@
   <main>
 
     <!-- ===== Hero ===== -->
+    <style>
+      /* Mobile hero: stack text above image instead of overlaying on it.
+         This avoids the iOS Safari vh bug where the content floats over
+         the background-image car. Desktop keeps the existing bg-image layout
+         from main.css untouched. */
+      @media (max-width: 767px) {
+        .hero--home {
+          background-image: none !important;
+          min-height: unset !important;
+          display: flex;
+          flex-direction: column;
+          padding: 0;
+        }
+        .hero--home .hero__content {
+          position: static;
+          transform: none;
+          padding: 2rem 1.25rem 1.5rem;
+          max-width: 100%;
+        }
+        .hero--home .hero__bg {
+          display: block;
+          width: 100%;
+          height: auto;
+          aspect-ratio: 4/3;
+          object-fit: cover;
+          object-position: center;
+        }
+        .hero--home .hero__ctas {
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .hero--home .hero__ctas .btn {
+          width: 100%;
+          text-align: center;
+        }
+      }
+      /* Hide the mobile image on desktop — bg-image handles it there */
+      @media (min-width: 768px) {
+        .hero--home .hero__bg { display: none; }
+      }
+    </style>
     <section class="hero hero--home">
       <div class="hero__content">
         <h1>No Reserve Photography</h1>
@@ -47,9 +88,13 @@
         </p>
         <div class="hero__ctas">
           <a class="btn btn--primary" href="/wallpapers/">View Wallpapers</a>
+          <a class="btn btn--ghost" href="/bat-portfolio/">Portfolio</a>
           <a class="btn btn--ghost" href="/client-galleries/">Client Galleries</a>
         </div>
       </div>
+      <!-- Mobile only: real <img> sits below text so it's never overlapped.
+           src matches the hero bg-image used by main.css. -->
+      <img class="hero__bg" src="/assets/images/DSC_1616.jpg" alt="No Reserve Photography hero car" />
     </section>
 
     <!-- ===== Photo carousel: "The Work" (stacked card peek) ===== -->
