@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Published Listings | No Reserve Photography</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet" />
+  <title>Auction Portfolio | No Reserve Photography</title>
   <link rel="stylesheet" href="/assets/css/main.css" />
   <style>
     .portfolio-header {
@@ -189,7 +192,7 @@
 
   <header class="portfolio-header">
     <p class="eyebrow">Published Work</p>
-    <h1>Bring a Trailer Listings</h1>
+    <h1>Auction Listings</h1>
     <p>Every car below sold at auction with photography by No Reserve. Tap any photo to view the original listing.</p>
   </header>
 
@@ -219,6 +222,20 @@
           .replace(/"/g, '&quot;');
       }
 
+      function platformFromUrl(url) {
+        try {
+          const host = new URL(url).hostname.replace('www.', '');
+          if (host.includes('bringatrailer.com')) return 'Bring a Trailer';
+          if (host.includes('carsandbids.com'))   return 'Cars & Bids';
+          if (host.includes('pcarmarket.com'))     return 'PCarMarket';
+          if (host.includes('mecum.com'))          return 'Mecum';
+          if (host.includes('ebay.com'))           return 'eBay Motors';
+          return 'View Listing';
+        } catch {
+          return 'View Listing';
+        }
+      }
+
       let listings;
       try {
         const res = await fetch('/bat-portfolio/listings.json');
@@ -240,14 +257,15 @@
       grid.innerHTML = listings.map(car => {
         const label = `${car.make} ${car.model}`;
         const imgSrc = `/api/portfolio-photo/${encodeURIComponent(car.r2Key)}`;
+        const platform = platformFromUrl(car.listingUrl);
         return `
           <a class="listing-tile"
-             href="${escHtml(car.batUrl)}"
+             href="${escHtml(car.listingUrl)}"
              target="_blank"
              rel="noopener noreferrer"
-             aria-label="${escHtml(car.year + ' ' + label)} — View on Bring a Trailer">
+             aria-label="${escHtml(car.year + ' ' + label)} — View on ${escHtml(platform)}">
             <img src="${escHtml(imgSrc)}" alt="${escHtml(car.year + ' ' + label)}" loading="lazy" decoding="async" />
-            <span class="tile-bat-badge">View on BaT ↗</span>
+            <span class="tile-bat-badge">View on ${escHtml(platform)} ↗</span>
             <div class="tile-caption">
               <span class="tile-year">${escHtml(String(car.year))}</span>
               <span class="tile-name">${escHtml(label)}</span>
