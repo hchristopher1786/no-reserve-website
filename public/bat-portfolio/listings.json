@@ -47,5 +47,40 @@
     "model": "Gallardo Superleggera",
     "listingUrl": "https://www.pcarmarket.com/auction/marketplace-2008-lamborghini-superleggera",
     "thumb": "/bat-portfolio/Images/2008-lamborghini-gallardo-superleggera.jpg"
+  },
+  {
+    "year": 2009,
+    "make": "Aston Martin",
+    "model": "V8 Vantage Roadster",
+    "listingUrl": "https://www.pcarmarket.com/auction/2009-aston-martin-v8-vantage-1",
+    "thumb": "/bat-portfolio/Images/2009-aston-martin-v8-vantage-roadster.jpg"
+  },
+  {
+    "year": 1986,
+    "make": "Porsche",
+    "model": "911 Turbo Slant Nose 3.4L",
+    "listingUrl": "https://bringatrailer.com/listing/1986-porsche-911-turbo-coupe-8/",
+    "thumb": "/bat-portfolio/Images/1986-porsche-911-turbo-slant-nose.jpg"
+  },
+  {
+    "year": 2006,
+    "make": "Cadillac",
+    "model": "XLR",
+    "listingUrl": "https://www.pcarmarket.com/auction/2006-cadillac-xlr-1",
+    "thumb": "/bat-portfolio/Images/2006-cadillac-xlr.jpg"
+  },
+  {
+    "year": 2013,
+    "make": "Porsche",
+    "model": "991 Carrera S",
+    "listingUrl": "https://www.pcarmarket.com/auction/2013-porsche-911-carrera-s-8",
+    "thumb": "/bat-portfolio/Images/2013-porsche-991-carrera-s.jpg"
+  },
+  {
+    "year": 2005,
+    "make": "Mercedes-Benz",
+    "model": "CL600 V12",
+    "listingUrl": "https://www.pcarmarket.com/auction/marketplace-2005-mercedes-benz-cl600",
+    "thumb": "/bat-portfolio/Images/2005-mercedes-benz-cl600.jpg"
   }
 ]
