@@ -4,20 +4,20 @@
     "make": "Porsche",
     "model": "911 Carrera",
     "listingUrl": "https://bringatrailer.com/listing/1987-porsche-911-carrera-93/",
-    "r2Key": "bat-portfolio/1987-porsche-carrera-G50.jpg"
+    "thumb": "/bat-portfolio/Images/1987-porsche-carrera-g50.jpg"
   },
   {
     "year": 2002,
     "make": "BMW",
     "model": "325i Wagon 6-Speed",
     "listingUrl": "https://bringatrailer.com/listing/2002-bmw-325i-touring-10/",
-    "r2Key": "bat-portfolio/2002-BMW-325i-Touring.jpg"
+    "thumb": "/bat-portfolio/Images/2002-bmw-325i-touring.jpg"
   },
   {
     "year": 2014,
     "make": "Land Rover",
     "model": "LR4 HSE",
     "listingUrl": "https://carsandbids.com/auctions/rbpn5yEk/2014-land-rover-lr4-hse",
-    "r2Key": "bat-portfolio/2014-landrover-lr4.jpg"
+    "thumb": "/bat-portfolio/Images/2014-landrover-lr4.jpg"
   }
 ]

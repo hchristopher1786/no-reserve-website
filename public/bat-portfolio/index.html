@@ -260,7 +260,7 @@
 
       grid.innerHTML = listings.map(car => {
         const label = `${car.make} ${car.model}`;
-        const imgSrc = `/api/portfolio-photo/${encodeURIComponent(car.r2Key)}`;
+        const imgSrc = car.thumb;
         const platform = platformFromUrl(car.listingUrl);
         return `
           <a class="listing-tile"
