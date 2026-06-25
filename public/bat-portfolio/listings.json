@@ -19,5 +19,33 @@
     "model": "LR4 HSE",
     "listingUrl": "https://carsandbids.com/auctions/rbpn5yEk/2014-land-rover-lr4-hse",
     "thumb": "/bat-portfolio/Images/2014-landrover-lr4.jpg"
+  },
+  {
+    "year": 2006,
+    "make": "Lexus",
+    "model": "LX470",
+    "listingUrl": "https://bringatrailer.com/listing/2006-lexus-lx-33/",
+    "thumb": "/bat-portfolio/Images/2006-lexus-lx470.jpg"
+  },
+  {
+    "year": 2021,
+    "make": "Porsche",
+    "model": "992 Targa 4S Heritage Design Edition",
+    "listingUrl": "https://www.pcarmarket.com/auction/2021-porsche-911-targa-4s-heritage-edition",
+    "thumb": "/bat-portfolio/Images/2021-porsche-992-targa-4s-heritage.jpg"
+  },
+  {
+    "year": 1995,
+    "make": "Ferrari",
+    "model": "F355 Spider 6-Speed",
+    "listingUrl": "https://www.pcarmarket.com/auction/1995-ferrari-f355-spider",
+    "thumb": "/bat-portfolio/Images/1995-ferrari-f355-spider.jpg"
+  },
+  {
+    "year": 2008,
+    "make": "Lamborghini",
+    "model": "Gallardo Superleggera",
+    "listingUrl": "https://www.pcarmarket.com/auction/marketplace-2008-lamborghini-superleggera",
+    "thumb": "/bat-portfolio/Images/2008-lamborghini-gallardo-superleggera.jpg"
   }
 ]
