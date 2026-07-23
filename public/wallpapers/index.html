@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wallpapers — No Reserve Photography</title>
-  <meta name="description" content="Full-resolution desktop wallpapers — $1 each." />
+  <meta name="description" content="Full-resolution desktop wallpapers — free to download." />
   <link rel="icon" href="/Logo_Circular_PNG.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -39,7 +39,7 @@
     <section class="hero hero--compact">
       <div class="hero__content">
         <h1>Wallpapers</h1>
-        <p class="hero__subhead">Full-resolution desktop wallpapers — $1 each.</p>
+        <p class="hero__subhead">Full-resolution desktop wallpapers — free to download.</p>
       </div>
     </section>
 
@@ -125,8 +125,9 @@
     ];
 
     // Render one card per wallpaper. The media area shows a downscaled
-    // public preview from /assets/wallpapers/ — the full-resolution file
-    // stays in R2 behind the paywall and is only served by /api/download.
+    // public preview from /assets/wallpapers/; the Download button links to
+    // /api/wallpaper/{id}, which streams the full-resolution original from
+    // R2 for free.
     (function renderWallpapers() {
       const grid = document.getElementById('wallpaper-grid');
       if (!grid) return;
@@ -152,12 +153,13 @@
 
         const price = document.createElement('span');
         price.className = 'wallpaper-card__price';
-        price.textContent = '$1.00';
+        price.textContent = 'Free';
 
-        const btn = document.createElement('button');
+        const btn = document.createElement('a');
         btn.className = 'btn btn--primary';
-        btn.textContent = 'Buy & Download';
-        btn.addEventListener('click', function () { buyPhoto(w.id, w.name, 100); });
+        btn.textContent = 'Download';
+        btn.href = '/api/wallpaper/' + w.id;
+        btn.setAttribute('download', '');
 
         body.appendChild(title);
         body.appendChild(price);
@@ -169,24 +171,9 @@
     })();
   </script>
 
-  <!-- ===== Checkout ===== -->
-  <script>
-    // Posts to the existing Worker route /api/checkout, which creates a
-    // Stripe Checkout Session and returns its hosted URL. The Worker looks
-    // up the real price from src/catalog.js by photoId — priceCents sent
-    // here is ignored server-side (kept for the call signature only).
-    // priceCents: 100 = $1.00
-    async function buyPhoto(photoId, photoName, priceCents) {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoId, photoName, priceCents })
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert('Something went wrong. Please try again.');
-    }
-  </script>
+  <!-- Wallpapers are free: each card links straight to /api/wallpaper/{id}.
+       The Stripe checkout flow (/api/checkout, /api/webhook, /api/download)
+       is left in place in the Worker for future paid gallery sales. -->
 
 </body>
 </html>

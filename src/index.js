@@ -28,8 +28,17 @@ export default {
 
     // Paid wallpaper download. The session_id Stripe puts on the
     // success_url is the proof of purchase — we verify it server-side.
+    // (Kept for future paid gallery sales; wallpapers are now free.)
     if (url.pathname === "/api/download" && request.method === "GET") {
       return handleDownload(request, env);
+    }
+
+    // Free wallpaper download: /api/wallpaper/{photoId}. No payment —
+    // maps the photoId to its R2 object via the catalog and streams the
+    // full-res original as an attachment.
+    const wallpaperMatch = url.pathname.match(/^\/api\/wallpaper\/([^/]+)$/);
+    if (wallpaperMatch && request.method === "GET") {
+      return handleWallpaperDownload(decodeURIComponent(wallpaperMatch[1]), env);
     }
 
     const galleryMatch = url.pathname.match(/^\/api\/gallery\/([^/]+)$/);
@@ -364,6 +373,39 @@ async function handleDownload(request, env) {
   headers.set("etag", object.httpEtag);
   headers.set("Cache-Control", "private, no-store");
   // Force a download with a sensible filename rather than rendering inline.
+  const filename = item.r2Key.split("/").pop();
+  headers.set("Content-Disposition", `attachment; filename="${filename}"`);
+
+  return new Response(object.body, { headers });
+}
+
+// ---------------------------------------------------------------------
+// GET /api/wallpaper/{photoId} — free full-res wallpaper download.
+//
+// Wallpapers are given away for free, so unlike /api/download there's no
+// Stripe session to verify. We map the photoId to its R2 object via the
+// catalog and stream the original as an attachment. The Stripe
+// checkout/webhook/download routes above are intentionally left intact
+// for future paid gallery sales.
+// ---------------------------------------------------------------------
+async function handleWallpaperDownload(photoId, env) {
+  const item = getWallpaper(photoId);
+  if (!item) {
+    return new Response("Wallpaper not found", { status: 404 });
+  }
+
+  const object = await env.PHOTOS_BUCKET.get(item.r2Key);
+  if (!object) {
+    return new Response("File not available yet", { status: 404 });
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  if (!headers.get("content-type")) {
+    headers.set("content-type", contentTypeFor(item.r2Key));
+  }
+  headers.set("etag", object.httpEtag);
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
   const filename = item.r2Key.split("/").pop();
   headers.set("Content-Disposition", `attachment; filename="${filename}"`);
 
