@@ -508,7 +508,11 @@ main { padding-top: var(--nav-height); }
   text-align: center;
   color: var(--text-muted);
 }
-.site-footer__logo { margin: 0 auto var(--space-sm); width: 64px; height: 64px; }
+.site-footer__logo {
+  margin: 0 auto var(--space-md);
+  width: clamp(180px, 34vw, 300px);
+  height: auto;
+}
 .site-footer__links {
   display: flex;
   gap: var(--space-md);
