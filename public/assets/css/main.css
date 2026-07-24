@@ -204,7 +204,7 @@ main { padding-top: var(--nav-height); }
   /* Full-bleed hero photo with a dark overlay so the text stays legible. */
   background-image:
     linear-gradient(rgba(26, 26, 26, 0.55), rgba(26, 26, 26, 0.55)),
-    url("/assets/images/DSC_1616.jpg");
+    url("/assets/images/DSC_7402.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -265,7 +265,7 @@ main { padding-top: var(--nav-height); }
   /* Scrim fades from the top (where the text sits) to transparent. */
   background-image:
     linear-gradient(to bottom, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.25) 50%, transparent 100%),
-    url("/assets/images/DSC_1616.jpg");
+    url("/assets/images/DSC_7402.jpg");
   background-position: center 60%; /* nudge the car down for breathing room */
 }
 .hero--home .hero__content {
