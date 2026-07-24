@@ -522,6 +522,16 @@ main { padding-top: var(--nav-height); }
 .site-footer__links a { border-bottom: 1px solid transparent; }
 .site-footer__links a:hover { border-bottom-color: var(--accent); }
 
+/* Icon links (e.g. Instagram): no underline, brighten on hover */
+.site-footer__ig {
+  display: inline-flex;
+  color: var(--text-muted);
+  border-bottom: none !important;
+  transition: color 0.2s ease;
+}
+.site-footer__ig:hover { color: var(--text); }
+.site-footer__ig svg { display: block; }
+
 /* ---------------------------------------------------------------------
    12. Simple centered message page (download-success)
    --------------------------------------------------------------------- */
