@@ -292,7 +292,7 @@
       // full R2 key like "carousel/carousel-0.jpg"; the image is served via
       // /api/carousel-photo/{filename}, so strip everything up to the last
       // slash to get just the filename portion.
-      function buildSlide(photo) {
+      function buildSlide(photo, version) {
         var key = typeof photo === 'string' ? photo : ((photo && photo.key) || '');
         var filename = key.split('/').pop();
         var caption = (photo && typeof photo === 'object' && photo.caption) ? photo.caption : '';
@@ -300,8 +300,13 @@
         var slide = document.createElement('div');
         slide.className = 'peek-carousel__slide';
 
+        // Cache-bust: the filenames (carousel-0.jpg…) are reused every day, so
+        // the nightly refresh overwrites the same URLs. Append the config's
+        // "refreshed" timestamp as ?v= so browsers/CDN re-fetch when it changes
+        // (and still cache hard within the day).
         var img = document.createElement('img');
-        img.src = '/api/carousel-photo/' + filename;
+        img.src = '/api/carousel-photo/' + filename +
+          (version ? '?v=' + encodeURIComponent(version) : '');
         img.alt = caption || 'No Reserve Photography work sample';
         img.loading = 'lazy';
         slide.appendChild(img);
@@ -372,12 +377,13 @@
 
       // Fetch the carousel config, inject a slide per photo, build the dots,
       // show the first slide, then start auto-advancing.
-      fetch('/api/carousel')
+      fetch('/api/carousel', { cache: 'no-store' })
         .then(function (res) { return res.json(); })
         .then(function (data) {
           var photos = (data && Array.isArray(data.photos)) ? data.photos : [];
+          var version = (data && data.refreshed) ? data.refreshed : '';
           track.innerHTML = '';
-          photos.forEach(function (photo) { track.appendChild(buildSlide(photo)); });
+          photos.forEach(function (photo) { track.appendChild(buildSlide(photo, version)); });
           count = photos.length;
           index = 0;
           buildDots();
