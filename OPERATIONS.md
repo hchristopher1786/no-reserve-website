@@ -55,7 +55,6 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
   webhook call → redirect to success page, all three steps fired in
   sequence for a test purchase
 - R2 bucket `no-reserve-photos` created and bound as `PHOTOS_BUCKET`
-- Stripe is in **test mode** (sk_test_/whsec_ keys in Cloudflare env vars)
 
 ## Resolved since 2026-06-18
 
@@ -137,7 +136,5 @@ Live: no-reserve-photography.harrycchristopher.workers.dev
    downloadKeys, BOM-free). One real gallery (Viper GTS) exists so far.
 2. **Drop in real placeholder swaps** — hero photo, carousel images,
    about image. (Wallpaper card thumbnails are done.)
-3. **Switch Stripe to live mode** and confirm the webhook secret +
-   keys are the live ones before taking real money.
-4. **Footer links** — Instagram and Bring a Trailer hrefs are still `#`.
-5. **Custom domain** — wire noreservephotography.com to the Worker.
+3. **Footer links** — Instagram and Bring a Trailer hrefs are still `#`.
+4. **Custom domain** — wire noreservephotography.com to the Worker.
