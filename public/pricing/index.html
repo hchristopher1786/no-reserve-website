@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing — No Reserve Photography</title>
+  <meta name="description" content="Auction-car photography packages for Bring a Trailer, PCarMarket, Cars & Bids, Mecum, and eBay Motors. Drone, undercarriage, and full detail coverage — based in Houston, TX." />
+  <link rel="icon" href="/Logo_Circular_PNG.png" />
+
+  <!-- Fonts: Inter (body) + Oswald (condensed headings) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/assets/css/main.css" />
+</head>
+<body>
+
+  <!-- ===== Shared header (duplicated across pages — no build system) ===== -->
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__logo" href="/" aria-label="No Reserve Photography home">
+        <img src="/Logo_Rectangular_Transp_Back.png" alt="No Reserve Photography" />
+      </a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="site-nav">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav" id="site-nav">
+        <a href="/">Home</a>
+        <a href="/pricing/" class="is-active">Pricing</a>
+        <a href="/wallpapers/">Wallpapers</a>
+        <a href="/bat-portfolio/">Portfolio</a>
+        <a href="/client-galleries/">Client Galleries</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===== Compact hero ===== -->
+    <section class="hero hero--compact">
+      <div class="hero__content">
+        <h1>Pricing</h1>
+        <p class="hero__subhead">Auction-ready coverage, priced by how far your listing needs to go.</p>
+      </div>
+    </section>
+
+    <!-- ===== Packages ===== -->
+    <section class="section">
+      <div class="container">
+        <h2 class="section__heading">Shoot Packages</h2>
+        <p class="pricing-intro">
+          Every package is shot on location around Greater Houston and delivered
+          in a private online gallery with full-resolution downloads. Prices are a
+          starting point &mdash; unusual cars, tight timelines, or multi-car
+          sessions may adjust the quote.
+        </p>
+
+        <!-- Scoped pricing styles. Kept on the page (no build system) so this
+             stays self-contained; all colours/spacing reference the shared
+             design tokens in main.css. -->
+        <style>
+          .pricing-intro {
+            max-width: 720px;
+            margin: -2.5rem auto var(--space-lg);
+            text-align: center;
+            color: var(--text-muted);
+          }
+
+          .pricing-grid {
+            display: grid;
+            grid-template-columns: 1fr;   /* mobile: 1 col */
+            gap: var(--space-md);
+            align-items: start;
+          }
+
+          .price-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: var(--space-md);
+            height: 100%;
+          }
+          /* Featured tier lifts forward with an accent frame. */
+          .price-card--featured {
+            border-color: var(--accent);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+          }
+
+          .price-card__badge {
+            align-self: flex-start;
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.7rem;
+            color: var(--bg);
+            background: var(--accent);
+            padding: 0.25rem 0.6rem;
+            margin-bottom: var(--space-sm);
+          }
+
+          .price-card__name {
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 1.25rem;
+            margin: 0 0 var(--space-xs);
+          }
+
+          .price-card__for {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            min-height: 2.6em;   /* keep the price line aligned across cards */
+            margin: 0 0 var(--space-sm);
+          }
+
+          .price-card__price {
+            font-family: var(--font-head);
+            font-weight: 700;
+            line-height: 1;
+            font-size: 2.6rem;
+            margin-bottom: 0.15rem;
+          }
+          .price-card__price .price-card__from {
+            display: block;
+            font-family: var(--font-body);
+            font-weight: 400;
+            font-size: 0.75rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+          }
+
+          .price-card__divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: var(--space-sm) 0;
+          }
+
+          .price-card__features {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 var(--space-md);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xs);
+            flex: 1 1 auto;   /* pushes the button to the bottom */
+          }
+          .price-card__features li {
+            position: relative;
+            padding-left: 1.4rem;
+            font-size: 0.95rem;
+            color: var(--text);
+          }
+          .price-card__features li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0.55em;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+          }
+          .price-card__features li em {
+            color: var(--text-muted);
+            font-style: normal;
+          }
+
+          .price-card .btn { text-align: center; }
+
+          /* Notes / add-ons strip */
+          .pricing-notes {
+            margin-top: var(--space-lg);
+            border: 1px solid var(--border);
+            background: var(--surface);
+            padding: var(--space-md);
+          }
+          .pricing-notes h3 {
+            font-family: var(--font-head);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 1.05rem;
+            margin: 0 0 var(--space-sm);
+          }
+          .pricing-notes ul {
+            margin: 0;
+            padding-left: 1.1rem;
+            color: var(--text-muted);
+          }
+          .pricing-notes li { margin-bottom: 0.35rem; }
+
+          @media (min-width: 768px) {
+            .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+          }
+        </style>
+
+        <div class="pricing-grid">
+
+          <!-- Tier 1 -->
+          <article class="price-card">
+            <h3 class="price-card__name">Listing Essentials</h3>
+            <p class="price-card__for">For Cars &amp; Bids, eBay Motors, and private sales that need a clean, complete set.</p>
+            <div class="price-card__price"><span class="price-card__from">Starting at</span>$395</div>
+            <hr class="price-card__divider" />
+            <ul class="price-card__features">
+              <li>50&ndash;60 professionally edited photos</li>
+              <li>Full exterior, interior, engine bay &amp; trunk</li>
+              <li>Key detail &amp; honest flaw documentation</li>
+              <li>Private online gallery, full-res downloads</li>
+              <li>3&ndash;4 business day delivery</li>
+            </ul>
+            <a class="btn btn--ghost" href="mailto:Chris@noreservephotography.com?subject=Booking%20%E2%80%94%20Listing%20Essentials">Book Essentials</a>
+          </article>
+
+          <!-- Tier 2 (featured) -->
+          <article class="price-card price-card--featured">
+            <span class="price-card__badge">Most Popular</span>
+            <h3 class="price-card__name">Auction Signature</h3>
+            <p class="price-card__for">Built for Bring a Trailer &amp; PCarMarket listings that live or die on the photos.</p>
+            <div class="price-card__price"><span class="price-card__from">Starting at</span>$650</div>
+            <hr class="price-card__divider" />
+            <ul class="price-card__features">
+              <li>Everything in Essentials, <em>plus:</em></li>
+              <li>90&ndash;120 edited photos</li>
+              <li>Aerial drone coverage</li>
+              <li>Full undercarriage on the 4-post lift</li>
+              <li>Cold-start &amp; walkaround detail set</li>
+              <li>2&ndash;3 business day delivery</li>
+            </ul>
+            <a class="btn btn--primary" href="mailto:Chris@noreservephotography.com?subject=Booking%20%E2%80%94%20Auction%20Signature">Book Signature</a>
+          </article>
+
+          <!-- Tier 3 -->
+          <article class="price-card">
+            <h3 class="price-card__name">Showcase</h3>
+            <p class="price-card__for">For six-figure exotics and concours-grade cars that deserve the full treatment.</p>
+            <div class="price-card__price"><span class="price-card__from">Starting at</span>$995</div>
+            <hr class="price-card__divider" />
+            <ul class="price-card__features">
+              <li>Everything in Signature, <em>plus:</em></li>
+              <li>150+ edited photos</li>
+              <li>Short vertical walkaround video clip</li>
+              <li>Studio-style detail &amp; badge macros</li>
+              <li>Priority scheduling &amp; same-week delivery</li>
+            </ul>
+            <a class="btn btn--ghost" href="mailto:Chris@noreservephotography.com?subject=Booking%20%E2%80%94%20Showcase">Book Showcase</a>
+          </article>
+
+        </div>
+
+        <!-- Add-ons / fine print -->
+        <div class="pricing-notes">
+          <h3>Good to know</h3>
+          <ul>
+            <li>Travel within Greater Houston is included; shoots beyond the metro are billed at standard mileage.</li>
+            <li>Rush 24-hour delivery available on any package for +$150.</li>
+            <li>Additional retouching, extra angles, or a longer video edit can be quoted on request.</li>
+            <li>Multi-car and dealer-volume pricing available &mdash; just ask.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Closing CTA ===== -->
+    <section class="section" style="padding-top: 0;">
+      <div class="container" style="text-align: center;">
+        <h2>Ready to List?</h2>
+        <p style="color: var(--text-muted); max-width: 620px; margin: 0 auto var(--space-md);">
+          Tell me the car, the platform, and your timeline, and I&rsquo;ll get you on the calendar.
+        </p>
+        <a class="btn btn--primary" href="mailto:Chris@noreservephotography.com?subject=Shoot%20Inquiry">Request a Quote</a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Shared footer ===== -->
+  <footer class="site-footer">
+    <div class="container">
+      <img class="site-footer__logo" src="/Logo_Circular_PNG.png" alt="No Reserve Photography" />
+      <p>&copy; 2026 No Reserve Photography</p>
+      <div class="site-footer__links">
+        <a href="#" aria-label="Instagram (link coming soon)">Instagram</a>
+        <a href="#" aria-label="Bring a Trailer profile (link coming soon)">Bring a Trailer</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assets/js/main.js"></script>
+
+</body>
+</html>
